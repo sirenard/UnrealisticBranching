@@ -32,10 +32,10 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
     if(addBranchScheme) {
         SCIP_CALL( SCIPsetIntParam(scip,"branching/unrealistic/priority",536870911) );
         SCIP_CALL( SCIPsetIntParam(scip,"branching/vanillafullstrong/priority",0) );
-        SCIP_CALL( SCIPsetIntParam(scip,"branching/fullstrong/priority",0) );
+        SCIP_CALL( SCIPsetIntParam(scip,"branching/pscost/priority",0) );
 
     } else{
-        SCIP_CALL( SCIPsetIntParam(scip,"branching/vanillafullstrong/priority",536870911) );
+        SCIP_CALL( SCIPsetIntParam(scip,"branching/pscost/priority",536870911) );
         SCIP_CALL( SCIPsetIntParam(scip,"branching/unrealistic/priority",0) );
         SCIP_CALL( SCIPsetRealParam(scip,"limits/time",10) );
     }

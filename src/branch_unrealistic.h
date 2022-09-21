@@ -22,19 +22,17 @@ private:
     SCIP_DECL_BRANCHEXECLP(scip_execlp) override;
 
     /**
-     * Compute the realNnodes i.e. the minimum number of nodes needed to solve the problem if the branching
+     * Compute the realNnodes i.e. the minimum number of nodes needed to solve the 2 children problem if the branching
      * is done on a given variable
      * @param scip
      * @param score will be filled by the realNnodes of the variable
-     * @param branchSide will be filled by 0 (1) if the optimal solution is get by exploring the left (adding an upper bound) child
-     * when branching on the given variable
      * @param bestScore current best realNnodes seen so far, -1 if none
      * @param fracValue fractional value of the tested variable
      * @param varbrch variable to branch on
      * @return
      */
-    SCIP_RETCODE computeScore(SCIP *scip, int *score, SCIP_Real *childPrimalBounds, int bestScore,
-                              SCIP_Real fracValue, SCIP_VAR *varbrch, SCIP_BoundType &branchSide) const;
+    SCIP_RETCODE computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalBounds, int bestScore,
+                              SCIP_Real fracValue, SCIP_VAR *varbrch) const;
 
     Branch_unrealistic(SCIP *scip, int depth, int maxdepth);
 

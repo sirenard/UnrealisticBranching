@@ -40,9 +40,8 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
     // computing realNnodes for each variable
     for(int i=0; i<nlpcands; ++i){
-        int score[2] = {INT_MAX, INT_MAX};
+        int score = INT_MAX;
         SCIP_Real childPrimalBounds[2];
-        SCIP_BoundType branchSide;
         assert(lpcands[i] != nullptr);
 
         SCIP_CALL(computeScore(
@@ -51,23 +50,21 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
                 childPrimalBounds,
                 bestScore,
                 lpcandsfrac[i],
-                lpcands[i],
-                branchSide));
+                lpcands[i]));
 
-        varScores[i] = score[branchSide];
+        varScores[i] = score;
         //varScores[i] = 0;
         if(varScores[i] == 0){
             continue;
         }
 
-        if(bestScore == -1 || score[branchSide] < bestScore){
-            bestScore = score[branchSide];
+        if(bestScore == -1 || score < bestScore){
+            bestScore = score;
             bestcand = i;
-            bestBranchSide = branchSide;
         }
 
         if(!depth)
-            SCIPdebugMsg(scip, (std::string(depth, '\t') + std::to_string(i+1) +"/" + std::to_string(nlpcands) + " (score: " + std::to_string(score[branchSide]) +")\n").c_str());
+            SCIPdebugMsg(scip, (std::string(depth, '\t') + std::to_string(i+1) +"/" + std::to_string(nlpcands) + " (score: " + std::to_string(score) +")\n").c_str());
     }
 
 
@@ -75,21 +72,16 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
         SCIPdebugMsg(scip, ("Var to branch: " + std::to_string(bestcand + 1) + "; " +
                             std::string(SCIPvarGetName(lpcands[bestcand])) + "; Score: " +
                             std::to_string(bestScore) + "\n").c_str());
-        int ii=2;
     }
 
     SCIP_Node* children[2];
     SCIP_CALL( SCIPbranchVar(scip, lpcands[bestcand], &children[0], NULL, &children[1]) );
     *result = SCIP_BRANCHED;
 
-    // cut the worst child that doesn't lead to the best solution
-    //SCIPcutoffNode(scip, children[bestBranchSide != SCIP_BOUNDTYPE_UPPER]);
-    //SCIPpruneTree(scip);
-
 
     if(dataWriter && depth==0){
-        dataWriter->addNode(scip, children[bestBranchSide != SCIP_BOUNDTYPE_UPPER], nlpcands, varScores, lpcands,
-                            bestScore, bestcand);
+        //dataWriter->addNode(scip, children[bestBranchSide != SCIP_BOUNDTYPE_UPPER], nlpcands, varScores, lpcands,
+        //                    bestScore, bestcand);
     }
 
     SCIPfreeBlockMemoryArray(scip, &varScores, nlpcands);
@@ -99,15 +91,15 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
 
 SCIP_RETCODE
-Branch_unrealistic::computeScore(SCIP *scip, int *score, SCIP_Real *childPrimalBounds, int bestScore,
-                                 SCIP_Real fracValue, SCIP_VAR *varbrch, SCIP_BoundType &branchSide) const {
-    SCIP_Real primalBound = SCIP_REAL_MAX;
-    int direction = SCIPgetObjsense(scip)==SCIP_OBJSENSE_MAXIMIZE?1:-1; // 1 if max problem, -1 if min problem
-    int nodeLimit = (dataWriter && depth==0) || bestScore<=0?-1:bestScore+5; // if realNnodes data are not used, no need to run more than the best realNnodes
+Branch_unrealistic::computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalBounds, int bestScore,
+                                 SCIP_Real fracValue, SCIP_VAR *varbrch) const {
+
+    score = 0;
     //nodeLimit = -1;
 
-    score[0] = 0;
     for(auto bound : {SCIP_BOUNDTYPE_UPPER, SCIP_BOUNDTYPE_LOWER}) {
+        int nodeLimit = (dataWriter && depth==0) || bestScore<=0?-1:bestScore+1-score; // if realNnodes data are not used, no need to run more than the best realNnodes
+
         SCIP *scip_copy;
         SCIP_Bool valid;
         SCIP_CALL(SCIPcreate(&scip_copy));
@@ -155,21 +147,23 @@ Branch_unrealistic::computeScore(SCIP *scip, int *score, SCIP_Real *childPrimalB
 
         int localScore = SCIPgetNNodes(scip_copy);
 
-        // TODO: upgrade feasibility detection
-        if(localPrimalBound == SCIPgetDualbound(scip_copy) && localPrimalBound!= 100000000000000000000.0) { // if feasible
-            score[0] += localScore;
-            //score[bound] = localScore;
+        auto status = SCIPgetStatus(scip_copy);
 
-            // TODO: Work only with min problem, it looks like that max problems are transformed to min
-            // no realNnodes already register or the second branching brings to a better solution
-            if (localPrimalBound < primalBound) {
-                branchSide = bound;
-            }
-
-            primalBound = localPrimalBound;
+        if(status != SCIP_STATUS_INFEASIBLE){
+            score += localScore;
         } else{
-            //score[bound] = INT_MAX;
+            score += 1;
         }
+
+        if(status == SCIP_STATUS_TIMELIMIT){
+            score = INT_MAX;
+            break;
+        }
+
+        if(score < 25){
+            int ii=2;
+        }
+
 
         SCIP_CALL( SCIPreleaseCons(scip_copy, &cons) );
 
@@ -179,7 +173,6 @@ Branch_unrealistic::computeScore(SCIP *scip, int *score, SCIP_Real *childPrimalB
 
     }
 
-    branchSide = SCIP_BOUNDTYPE_LOWER;
     return SCIP_OKAY;
 }
 
