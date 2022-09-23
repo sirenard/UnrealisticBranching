@@ -38,6 +38,7 @@ private:
 
 public:
     explicit Branch_unrealistic(SCIP *scip, int maxdepth=1);
+    int* getMaxDepthPtr();
 
     static void setDataWriter(DatasetWriter *dataWriter);
 };

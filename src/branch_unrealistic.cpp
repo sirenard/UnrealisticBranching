@@ -30,7 +30,6 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
     int bestcand = 0;
     int bestScore = -1;
     SCIP_BoundType bestBranchSide; // which child must be cut from the tree (doesn't lead to the optimal solution)
-    SCIP_NODE *current = SCIPgetCurrentNode(scip);
 
     // get branching candidates
     SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, nullptr, &lpcandsfrac, nullptr, &nlpcands, nullptr) );
@@ -56,7 +55,6 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
                 branchSide));
 
         varScores[i] = score;
-        //varScores[i] = 0;
         if(varScores[i] == 0){
             continue;
         }
@@ -99,7 +97,6 @@ Branch_unrealistic::computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalB
                                  SCIP_Real fracValue, SCIP_VAR *varbrch, SCIP_BoundType &branchSide) const {
 
     score = 0;
-    //nodeLimit = -1;
     SCIP_Real primalBound=SCIP_REAL_MAX;
     for(auto bound : {SCIP_BOUNDTYPE_UPPER, SCIP_BOUNDTYPE_LOWER}) {
         int nodeLimit = (dataWriter && depth==0) || bestScore<=0?-1:bestScore+1-score; // if realNnodes data are not used, no need to run more than the best realNnodes
@@ -115,7 +112,7 @@ Branch_unrealistic::computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalB
 
         auto *objbranchrule = new Branch_unrealistic(scip_copy, depth + 1, maxdepth);
         SCIP_CALL(SCIPincludeObjBranchrule(scip_copy, objbranchrule, TRUE));
-        Utils::configure_scip_instance(scip_copy, depth+1<maxdepth);
+        Utils::configure_scip_instance(scip_copy, depth+1<maxdepth || maxdepth==-1);
         SCIPsetLongintParam(scip_copy, "limits/nodes", nodeLimit);
 
         SCIP_CALL( SCIPsetIntParam(scip_copy, "display/verblevel",0));
@@ -184,4 +181,8 @@ Branch_unrealistic::computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalB
 DatasetWriter* Branch_unrealistic::dataWriter = nullptr;
 void Branch_unrealistic::setDataWriter(DatasetWriter *dataWriter) {
     Branch_unrealistic::dataWriter = dataWriter;
+}
+
+int *Branch_unrealistic::getMaxDepthPtr() {
+    return &maxdepth;
 }

@@ -21,10 +21,23 @@ SCIP_Retcode Utils::create_scip_instance(SCIP** scipp, bool addBranchScheme) {
 
     /* include default SCIP plugins */
     SCIP_CALL( SCIPincludeDefaultPlugins(*scipp) );
-    SCIP_CALL(SCIPincludeObjBranchrule(scip, new Branch_unrealistic(scip), TRUE));
-    SCIP_CALL(SCIPincludeObjDialog(scip, new DialogGenerateDataset(scip), TRUE));
-    //SCIP_CALL( SCIPincludeObjNodesel(scip, new NodeSelRandom(scip), TRUE) );
 
+    Branch_unrealistic *objbranchrule = new Branch_unrealistic(scip);
+    SCIP_CALL(SCIPincludeObjBranchrule(scip, objbranchrule, TRUE));
+
+    SCIP_CALL(SCIPincludeObjDialog(scip, new DialogGenerateDataset(scip), TRUE));
+    SCIP_CALL(SCIPaddIntParam(
+            scip,
+            "branching/unrealistic/recursiondepth",
+            "How depth the unrealistic branching is performed with the recursion, -1 for unlimited depth",
+            objbranchrule->getMaxDepthPtr(),
+            FALSE,
+            1,
+            -1,
+            INT_MAX,
+            NULL,
+            NULL
+    ));
     configure_scip_instance(scip, addBranchScheme);
 
     return SCIP_OKAY;
