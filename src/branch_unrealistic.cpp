@@ -30,6 +30,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
     int bestcand = 0;
     int bestScore = -1;
     SCIP_BoundType bestBranchSide; // which child must be cut from the tree (doesn't lead to the optimal solution)
+    SCIP_NODE *current = SCIPgetCurrentNode(scip);
 
     // get branching candidates
     SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, nullptr, &lpcandsfrac, nullptr, &nlpcands, nullptr) );
@@ -41,6 +42,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
     // computing realNnodes for each variable
     for(int i=0; i<nlpcands; ++i){
         int score = INT_MAX;
+        SCIP_BoundType branchSide;
         SCIP_Real childPrimalBounds[2];
         assert(lpcands[i] != nullptr);
 
@@ -50,7 +52,8 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
                 childPrimalBounds,
                 bestScore,
                 lpcandsfrac[i],
-                lpcands[i]));
+                lpcands[i],
+                branchSide));
 
         varScores[i] = score;
         //varScores[i] = 0;
@@ -60,11 +63,12 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
         if(bestScore == -1 || score < bestScore){
             bestScore = score;
+            bestBranchSide = branchSide;
             bestcand = i;
         }
 
         if(!depth)
-            SCIPdebugMsg(scip, (std::string(depth, '\t') + std::to_string(i+1) +"/" + std::to_string(nlpcands) + " (score: " + std::to_string(score) +")\n").c_str());
+            SCIPdebugMsg(scip, (std::string(depth, '\t') + std::to_string(i+1) +"/" + std::to_string(nlpcands) + " (score: " + std::to_string(score) + ") (var: " + SCIPvarGetName(lpcands[i]) + ")\n").c_str());
     }
 
 
@@ -79,9 +83,9 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
     *result = SCIP_BRANCHED;
 
 
-    if(dataWriter && depth==0){
-        //dataWriter->addNode(scip, children[bestBranchSide != SCIP_BOUNDTYPE_UPPER], nlpcands, varScores, lpcands,
-        //                    bestScore, bestcand);
+    if(dataWriter && depth==0) {
+        dataWriter->addNode(scip, children[bestBranchSide], nlpcands, varScores, lpcands,
+                            bestScore, bestcand);
     }
 
     SCIPfreeBlockMemoryArray(scip, &varScores, nlpcands);
@@ -92,11 +96,11 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
 SCIP_RETCODE
 Branch_unrealistic::computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalBounds, int bestScore,
-                                 SCIP_Real fracValue, SCIP_VAR *varbrch) const {
+                                 SCIP_Real fracValue, SCIP_VAR *varbrch, SCIP_BoundType &branchSide) const {
 
     score = 0;
     //nodeLimit = -1;
-
+    SCIP_Real primalBound=SCIP_REAL_MAX;
     for(auto bound : {SCIP_BOUNDTYPE_UPPER, SCIP_BOUNDTYPE_LOWER}) {
         int nodeLimit = (dataWriter && depth==0) || bestScore<=0?-1:bestScore+1-score; // if realNnodes data are not used, no need to run more than the best realNnodes
 
@@ -160,10 +164,11 @@ Branch_unrealistic::computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalB
             break;
         }
 
-        if(score < 25){
-            int ii=2;
+        if(status == SCIP_STATUS_OPTIMAL){
+            if(localPrimalBound < primalBound){
+                branchSide = bound;
+            }
         }
-
 
         SCIP_CALL( SCIPreleaseCons(scip_copy, &cons) );
 

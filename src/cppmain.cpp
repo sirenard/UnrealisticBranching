@@ -38,11 +38,11 @@ SCIP_RETCODE runSCIP(
       )
    );
 
-    /*DatasetWriter writer("node.csv", "../branch.csv");
+    DatasetWriter writer("node.csv", "../branchTrain.csv");
     FeaturesCalculator featuresCalculator(scip, 1, 1, 1);
     writer.setFeaturesCalculator(&featuresCalculator);
-    Branch_unrealistic* branchingRule = (Branch_unrealistic*)SCIPfindBranchrule(scip, "unrealistic");
-    Branch_unrealistic::setDataWriter(&writer);*/
+    //Branch_unrealistic* branchingRule = (Branch_unrealistic*)SCIPfindBranchrule(scip, "unrealistic");
+    Branch_unrealistic::setDataWriter(&writer);
 
     SCIP_CALL( SCIPsolve(scip) );
 

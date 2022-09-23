@@ -271,7 +271,6 @@ void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip) {
         else
             features[2] = 0;
     }
-
 }
 
 const double *FeaturesCalculator::getStaticFeatures(SCIP_VAR *var) {

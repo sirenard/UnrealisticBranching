@@ -32,7 +32,7 @@ private:
      * @return
      */
     SCIP_RETCODE computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalBounds, int bestScore,
-                              SCIP_Real fracValue, SCIP_VAR *varbrch) const;
+                              SCIP_Real fracValue, SCIP_VAR *varbrch, SCIP_BoundType &branchSide) const;
 
     Branch_unrealistic(SCIP *scip, int depth, int maxdepth);
 

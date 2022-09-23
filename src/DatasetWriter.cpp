@@ -17,11 +17,12 @@ DatasetWriter::addNode(SCIP *scip, SCIP_NODE *node, int nlpcands, int *varScores
     featuresCalculator->computeDynamicProblemFeatures(scip);
     int maxScore=0;
     for(int i=0; i<nlpcands; ++i){
+        if(varScores[i] == INT_MAX)continue;
         if(varScores[i] > maxScore)maxScore=varScores[i];
     }
 
     for(int i=0; i<nlpcands; ++i){
-        if(varScores[i] == 0)continue;
+        if(varScores[i] == INT_MAX)continue;
         double score = 1.0 - ((double)varScores[i]/maxScore);
         SCIP_VAR* var = lpcands[i];
         writeLine(var, score);

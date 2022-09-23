@@ -37,7 +37,7 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
     } else{
         SCIP_CALL( SCIPsetIntParam(scip,"branching/pscost/priority",536870911) );
         SCIP_CALL( SCIPsetIntParam(scip,"branching/unrealistic/priority",0) );
-        SCIP_CALL( SCIPsetRealParam(scip,"limits/time",10) );
+        SCIP_CALL( SCIPsetRealParam(scip,"limits/time",60) );
     }
 
     /* for column generation instances, disable restarts */
