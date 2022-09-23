@@ -1,6 +1,7 @@
 .idea
 binPacking
 build
+inputs
 *.csv
 *.lp
 *.o

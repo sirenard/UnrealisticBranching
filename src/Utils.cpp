@@ -6,6 +6,7 @@
 #include "objscip/objscipdefplugins.h"
 #include "nodesel_random.h"
 #include "branch_unrealistic.h"
+#include "dialog_generateDataset.h"
 
 using namespace scip;
 
@@ -21,6 +22,7 @@ SCIP_Retcode Utils::create_scip_instance(SCIP** scipp, bool addBranchScheme) {
     /* include default SCIP plugins */
     SCIP_CALL( SCIPincludeDefaultPlugins(*scipp) );
     SCIP_CALL(SCIPincludeObjBranchrule(scip, new Branch_unrealistic(scip), TRUE));
+    SCIP_CALL(SCIPincludeObjDialog(scip, new DialogGenerateDataset(scip), TRUE));
     //SCIP_CALL( SCIPincludeObjNodesel(scip, new NodeSelRandom(scip), TRUE) );
 
     configure_scip_instance(scip, addBranchScheme);

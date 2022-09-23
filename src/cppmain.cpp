@@ -31,7 +31,7 @@ SCIP_RETCODE runSCIP(
     Utils::create_scip_instance(&scip, 1);
 
 
-    SCIP_CALL(SCIPreadProb(
+    /*SCIP_CALL(SCIPreadProb(
       scip,
       filename,
       NULL
@@ -48,11 +48,11 @@ SCIP_RETCODE runSCIP(
 
     SCIP_Longint score = SCIPgetNNodes(scip);
     SCIPinfoMessage(scip, NULL, ("Solved in " + std::to_string(score) + " nodes\n").c_str());
-
+    */
 
     //SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
 
-    //SCIP_CALL( SCIPprocessShellArguments(scip, 1, nullptr, "scip.set") );
+    SCIP_CALL( SCIPprocessShellArguments(scip, 1, nullptr, "scip.set") );
    /********************
     * Deinitialization *
     ********************/
