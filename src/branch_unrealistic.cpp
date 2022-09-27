@@ -41,6 +41,18 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
     int* varScores; // store every variable's realNnodes
     SCIPallocBlockMemoryArray(scip, &varScores, nlpcands);
 
+    // an instruction already exists for the first branching (given by the parent)
+    if(firstBranch!=nullptr){
+        //SCIPdebugMsg(scip, ("nnodes: " + std::to_string(SCIPgetNSols(scip) )+ "\n").c_str());
+        SCIP_CALL( SCIPbranchVar(scip, firstBranch, nullptr, NULL, nullptr) );
+
+        firstBranch=nullptr;
+        *result = SCIP_BRANCHED;
+        if(depth>=maxdepth){
+            Utils::configure_scip_instance(scip, false);
+        }
+        return SCIP_OKAY;
+    }
 
     // computing realNnodes for each variable
     for (int i = 0; i < nlpcands; ++i) {
@@ -101,79 +113,41 @@ Branch_unrealistic::computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalB
 
     score = 0;
     SCIP_Real primalBound=SCIP_REAL_MAX;
-    for(auto bound : {SCIP_BOUNDTYPE_UPPER, SCIP_BOUNDTYPE_LOWER}) {
-        int nodeLimit = (dataWriter && depth==0) || bestScore<=0?-1:bestScore-score; // if realNnodes data are not used, no need to run more than the best realNnodes
+    int nodeLimit = (dataWriter && depth==0) || bestScore<=0?-1:bestScore; // if realNnodes data are not used, no need to run more than the best realNnodes
 
-        SCIP *scip_copy;
-        SCIP_Bool valid;
-        SCIP_CALL(SCIPcreate(&scip_copy));
-        SCIP_HashMap *varmap;
-        SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip_copy), SCIPgetNVars(scip)) );
-        SCIP_CALL( SCIPcopy(scip, scip_copy, varmap, nullptr, "ub_subsolver", FALSE, FALSE, FALSE, FALSE, &valid) );
+    SCIP *scip_copy;
+    SCIP_Bool valid;
+    SCIP_CALL(SCIPcreate(&scip_copy));
+    SCIP_HashMap *varmap;
+    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip_copy), SCIPgetNVars(scip)) );
+    SCIP_CALL( SCIPcopy(scip, scip_copy, varmap, nullptr, "ub_subsolver", FALSE, FALSE, FALSE, FALSE, &valid) );
+    assert(valid == TRUE);
 
-        SCIPcopyParamSettings(scip, scip_copy);
+    SCIPcopyParamSettings(scip, scip_copy);
 
-        auto *objbranchrule = new Branch_unrealistic(scip_copy, depth + 1, maxdepth);
-        SCIP_CALL(SCIPincludeObjBranchrule(scip_copy, objbranchrule, TRUE));
-        Utils::configure_scip_instance(scip_copy, depth+1<maxdepth || maxdepth==-1);
-        SCIPsetLongintParam(scip_copy, "limits/nodes", nodeLimit);
+    auto *objbranchrule = new Branch_unrealistic(scip_copy, depth + 1, maxdepth);
+    SCIP_CALL(SCIPincludeObjBranchrule(scip_copy, objbranchrule, TRUE));
+    Utils::configure_scip_instance(scip_copy, true);
+    SCIPsetLongintParam(scip_copy, "limits/nodes", nodeLimit);
+    SCIP_CALL( SCIPsetIntParam(scip_copy, "display/verblevel",0));
 
-        SCIP_CALL( SCIPsetIntParam(scip_copy, "display/verblevel",0));
+    SCIP_VAR* varbrch_copy = (SCIP_VAR*) SCIPhashmapGetImage(varmap, varbrch);
+    assert(varbrch != nullptr);
 
+    objbranchrule->setFirstBranch(varbrch_copy);
 
-        assert(valid == TRUE);
+    setBestSol(scip, scip_copy, varmap);
 
-        SCIP_VAR* varbrch_copy = (SCIP_VAR*) SCIPhashmapGetImage(varmap, varbrch);
-        assert(varbrch != nullptr);
+    SCIPsolve(scip_copy);
 
-        // add the new constraint
-        SCIP_CONS *cons;
-        SCIP_Real coef = 1;
-        switch(bound){
-            case SCIP_BOUNDTYPE_LOWER:
-                SCIPcreateConsBasicLinear(scip_copy, &cons, "SIMON_LOWER", 1, &varbrch_copy,
-                                          &coef, std::ceil(fracValue),SCIP_REAL_MAX);
-                break;
-            case SCIP_BOUNDTYPE_UPPER:
-                SCIPcreateConsBasicLinear(scip_copy, &cons, "SIMON_UPPER", 1, &varbrch_copy,
-                                          &coef, SCIP_REAL_MIN, std::floor(fracValue));
-                break;
-        }
-        assert(cons!=nullptr);
-        SCIPaddCons(scip_copy, cons);
-        SCIPsolve(scip_copy);
+    int localScore = SCIPgetNNodes(scip_copy);
 
-        SCIP_Real localPrimalBound = SCIPgetPrimalbound(scip_copy);
-        childPrimalBounds[bound] = localPrimalBound;
+    score = localScore;
 
-        int localScore = SCIPgetNNodes(scip_copy);
-
-        auto status = SCIPgetStatus(scip_copy);
-
-        if(status != SCIP_STATUS_INFEASIBLE){
-            score += localScore;
-        } else{
-            score += 1;
-        }
-
-        if(status == SCIP_STATUS_TIMELIMIT){
-            score = INT_MAX;
-            break;
-        }
-
-        if(status == SCIP_STATUS_OPTIMAL){
-            if(localPrimalBound < primalBound){
-                branchSide = bound;
-            }
-        }
-
-        SCIP_CALL( SCIPreleaseCons(scip_copy, &cons) );
-
-        SCIPhashmapFree(&varmap);
-        SCIPreleaseVar(scip_copy, &varbrch_copy);
-        SCIPfree(&scip_copy);
-
-    }
+    // free memory allocated
+    SCIPhashmapFree(&varmap);
+    SCIPreleaseVar(scip_copy, &varbrch_copy);
+    SCIPfree(&scip_copy);
 
     return SCIP_OKAY;
 }
@@ -185,4 +159,39 @@ void Branch_unrealistic::setDataWriter(DatasetWriter *dataWriter) {
 
 int *Branch_unrealistic::getMaxDepthPtr() {
     return &maxdepth;
+}
+
+void Branch_unrealistic::setFirstBranch(SCIP_Var *firstBranch) {
+    Branch_unrealistic::firstBranch = firstBranch;
+}
+
+const SCIP_Retcode Branch_unrealistic::setBestSol(SCIP *scip, SCIP *scip_copy, SCIP_HashMap *varmap) const{
+    // get the initial vars
+    int nvars = SCIPgetNVars(scip);
+    SCIP_Var **vars = SCIPgetVars(scip);
+
+    // get values of the best sol
+    SCIP_Sol* bestSol = SCIPgetBestSol(scip);
+    if(bestSol == NULL) {
+        return SCIP_OKAY;
+    }
+    SCIP_Real* vals;
+    SCIPallocBlockMemoryArray(scip, &vals, nvars);
+    SCIPgetSolVals(scip, bestSol, nvars, vars, vals);
+
+    // copy the solution for scip_copy
+    SCIP_Sol* bestSol_copy;
+    SCIP_CALL( SCIPcreateSol(scip_copy, &bestSol_copy, NULL) );
+
+    for(int i=0; i<nvars; ++i){
+        SCIP_Var* varCopy =(SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
+        SCIPsetSolVal(scip_copy, bestSol_copy, varCopy, vals[i]);
+    }
+
+    unsigned int stored;
+    SCIPaddSol(scip_copy, bestSol_copy, &stored);
+    assert(stored);
+
+    SCIPfreeBlockMemoryArray(scip, &vals, nvars);
+
 }

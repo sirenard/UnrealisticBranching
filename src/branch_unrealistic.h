@@ -19,6 +19,7 @@ class Branch_unrealistic: public scip::ObjBranchrule {
 private:
     static DatasetWriter *dataWriter;
     int depth, maxdepth;
+    SCIP_Var* firstBranch;
     SCIP_DECL_BRANCHEXECLP(scip_execlp) override;
 
     /**
@@ -34,11 +35,19 @@ private:
     SCIP_RETCODE computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalBounds, int bestScore,
                               SCIP_Real fracValue, SCIP_VAR *varbrch, SCIP_BoundType &branchSide) const;
 
+    /**
+     * translate the best sol of scip to scip_copy
+     * @param varmap map that translates var of scip into var of scip_copy
+     */
+    const SCIP_Retcode setBestSol(SCIP *scip, SCIP *scip_copy, SCIP_HashMap *varmap) const;
+
     Branch_unrealistic(SCIP *scip, int depth, int maxdepth);
 
 public:
     explicit Branch_unrealistic(SCIP *scip, int maxdepth=1);
     int* getMaxDepthPtr();
+
+    void setFirstBranch(SCIP_Var *firstBranch);
 
     static void setDataWriter(DatasetWriter *dataWriter);
 };
