@@ -97,7 +97,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
 
     if(dataWriter && depth==0) {
-        dataWriter->addNode(scip, children[bestBranchSide], nlpcands, varScores, lpcands,
+        dataWriter->addNode(scip, children, nlpcands, varScores, lpcands,
                             bestScore, bestcand);
     }
 

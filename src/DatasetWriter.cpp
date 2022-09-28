@@ -11,7 +11,7 @@ branchStream(){
 }
 
 SCIP_RETCODE
-DatasetWriter::addNode(SCIP *scip, SCIP_NODE *node, int nlpcands, int *varScores, SCIP_VAR **lpcands, int bestScore,
+DatasetWriter::addNode(SCIP *scip, SCIP_NODE **node, int nlpcands, int *varScores, SCIP_VAR **lpcands, int bestScore,
                        int bestCand) {
     // compute the features
     featuresCalculator->computeDynamicProblemFeatures(scip);

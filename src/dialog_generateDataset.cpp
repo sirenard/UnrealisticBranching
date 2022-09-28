@@ -75,7 +75,7 @@ SCIP_DECL_DIALOGEXEC(DialogGenerateDataset::scip_exec){
     writer.setFeaturesCalculator(&featuresCalculator);
 
     Branch_unrealistic::setDataWriter(&writer);
-    Utils::configure_scip_instance(scip, true);
+    //Utils::configure_scip_instance(scip, true);
 
     SCIP_CALL( SCIPsolve(scip) );
 

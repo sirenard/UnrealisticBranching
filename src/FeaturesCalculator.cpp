@@ -221,9 +221,15 @@ FeaturesCalculator::~FeaturesCalculator() {
     }
 }
 
-void FeaturesCalculator::updateBranchCounter(SCIP_NODE *node, SCIP_VAR *var) {
-    double obj = SCIPnodeGetEstimate(node);
-    double parentObj = SCIPnodeGetEstimate(SCIPnodeGetParent(node));
+void FeaturesCalculator::updateBranchCounter(SCIP_NODE **node, SCIP_VAR *var) {
+    double obj = SCIP_REAL_MAX;
+    for(auto i:{0,1}){
+        double tmpObj = SCIPnodeGetEstimate(node[i]);
+        if(tmpObj < obj){
+            obj = tmpObj;
+        }
+    }
+    double parentObj = SCIPnodeGetEstimate(SCIPnodeGetParent(node[0]));
     double increase = (parentObj - obj)/obj;
     std::string key = std::string(SCIPvarGetName(var));
     numberBrchMap[key] = numberBrchMap[key] + 1 ;
