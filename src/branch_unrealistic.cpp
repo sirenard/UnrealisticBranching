@@ -130,6 +130,9 @@ Branch_unrealistic::computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalB
     Utils::configure_scip_instance(scip_copy, true);
     SCIPsetLongintParam(scip_copy, "limits/nodes", nodeLimit);
     SCIP_CALL( SCIPsetIntParam(scip_copy, "display/verblevel",0));
+    // dont use heuristics on recursion levels
+    SCIP_CALL( SCIPsetHeuristics(scip_copy, SCIP_PARAMSETTING_OFF, TRUE) );
+
 
     SCIP_VAR* varbrch_copy = (SCIP_VAR*) SCIPhashmapGetImage(varmap, varbrch);
     assert(varbrch != nullptr);
