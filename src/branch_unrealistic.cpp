@@ -43,15 +43,17 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
     // an instruction already exists for the first branching (given by the parent)
     if(firstBranch!=nullptr){
-        SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
         //SCIPdebugMsg(scip, ("nnodes: " + std::to_string(SCIPgetNSols(scip) )+ "\n").c_str());
         SCIP_CALL( SCIPbranchVar(scip, firstBranch, nullptr, NULL, nullptr) );
+
 
         firstBranch=nullptr;
 
         *result = SCIP_BRANCHED;
         if(depth>=maxdepth){
             SCIP_CALL( Utils::configure_scip_instance(scip, false) );
+        } else{
+            SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_FAST, TRUE) );
         }
         return SCIP_OKAY;
     }
@@ -130,7 +132,7 @@ Branch_unrealistic::computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalB
     SCIPsetLongintParam(scip_copy, "limits/nodes", nodeLimit);
     SCIP_CALL( SCIPsetIntParam(scip_copy, "display/verblevel",0));
     // don't use heuristics on recursion levels
-    //SCIP_CALL( SCIPsetHeuristics(scip_copy, SCIP_PARAMSETTING_OFF, TRUE) );
+    SCIP_CALL( SCIPsetHeuristics(scip_copy, SCIP_PARAMSETTING_OFF, TRUE) );
     SCIP_CALL( SCIPsetRealParam(scip_copy,"limits/time",600) );
 
     // TODO: Is usefull?
