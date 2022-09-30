@@ -43,20 +43,22 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
     // an instruction already exists for the first branching (given by the parent)
     if(firstBranch!=nullptr){
+        SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
         //SCIPdebugMsg(scip, ("nnodes: " + std::to_string(SCIPgetNSols(scip) )+ "\n").c_str());
         SCIP_CALL( SCIPbranchVar(scip, firstBranch, nullptr, NULL, nullptr) );
 
         firstBranch=nullptr;
+
         *result = SCIP_BRANCHED;
         if(depth>=maxdepth){
-            Utils::configure_scip_instance(scip, false);
+            SCIP_CALL( Utils::configure_scip_instance(scip, false) );
         }
         return SCIP_OKAY;
     }
 
     // computing realNnodes for each variable
     for (int i = 0; i < nlpcands; ++i) {
-        int score = INT_MAX;
+        int score;
         SCIP_BoundType branchSide;
         SCIP_Real childPrimalBounds[2];
         assert(lpcands[i] != nullptr);
@@ -74,7 +76,6 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
         if (bestScore == -1 || score < bestScore) {
             bestScore = score;
-            bestBranchSide = branchSide;
             bestcand = i;
         }
 
@@ -111,8 +112,6 @@ SCIP_RETCODE
 Branch_unrealistic::computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalBounds, int bestScore,
                                  SCIP_Real fracValue, SCIP_VAR *varbrch, SCIP_BoundType &branchSide) const {
 
-    score = 0;
-    SCIP_Real primalBound=SCIP_REAL_MAX;
     int nodeLimit = (dataWriter && depth==0) || bestScore<=0?-1:bestScore; // if realNnodes data are not used, no need to run more than the best realNnodes
 
     SCIP *scip_copy;
@@ -130,8 +129,12 @@ Branch_unrealistic::computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalB
     Utils::configure_scip_instance(scip_copy, true);
     SCIPsetLongintParam(scip_copy, "limits/nodes", nodeLimit);
     SCIP_CALL( SCIPsetIntParam(scip_copy, "display/verblevel",0));
-    // dont use heuristics on recursion levels
-    SCIP_CALL( SCIPsetHeuristics(scip_copy, SCIP_PARAMSETTING_OFF, TRUE) );
+    // don't use heuristics on recursion levels
+    //SCIP_CALL( SCIPsetHeuristics(scip_copy, SCIP_PARAMSETTING_OFF, TRUE) );
+    SCIP_CALL( SCIPsetRealParam(scip_copy,"limits/time",600) );
+
+    // TODO: Is usefull?
+    SCIP_CALL( SCIPmergeVariableStatistics(scip, scip_copy, SCIPgetVars(scip), SCIPgetVars(scip_copy), SCIPgetNVars(scip)) );
 
 
     SCIP_VAR* varbrch_copy = (SCIP_VAR*) SCIPhashmapGetImage(varmap, varbrch);
@@ -141,11 +144,29 @@ Branch_unrealistic::computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalB
 
     setBestSol(scip, scip_copy, varmap);
 
+    double timeLim;
+    SCIP_Longint nodelimit;
+
+    SCIPgetRealParam(scip_copy, "limits/time", &timeLim);
+    SCIPgetLongintParam(scip_copy, "limits/nodes", &nodelimit);
+
+
     SCIPsolve(scip_copy);
 
-    int localScore = SCIPgetNNodes(scip_copy);
+    SCIPgetRealParam(scip_copy, "limits/time", &timeLim);
 
-    score = localScore;
+    SCIP_STATUS status = SCIPgetStatus(scip_copy);
+    score = INT_MAX;
+    switch (status){
+        case SCIP_STATUS_NODELIMIT:
+        case SCIP_STATUS_OPTIMAL:
+            score = SCIPgetNNodes(scip_copy);
+            break;
+        case SCIP_STATUS_TIMELIMIT:
+            SCIPdebugMsg(scip, ("Time limit: " + std::to_string(SCIPgetTotalTime(scip_copy)) + "\n").c_str());
+            break;
+
+    }
 
     // free memory allocated
     SCIPhashmapFree(&varmap);
@@ -172,6 +193,17 @@ const SCIP_Retcode Branch_unrealistic::setBestSol(SCIP *scip, SCIP *scip_copy, S
     // get the initial vars
     int nvars = SCIPgetNVars(scip);
     SCIP_Var **vars = SCIPgetVars(scip);
+
+    /*SCIP_Node* nodeInit = SCIPgetCurrentNode(scip);
+    SCIP_Real lowerbound = SCIPnodeGetLowerbound(nodeInit);
+    SCIP_Real primalBound = SCIPnodeGetEstimate(nodeInit);
+
+    SCIP_Node* nodeCopy = SCIPgetCurrentNode(scip_copy);
+    SCIPupdateNodeLowerbound(scip_copy, nodeCopy, primalBound);
+
+
+
+    return SCIP_OKAY;*/
 
     // get values of the best sol
     SCIP_Sol* bestSol = SCIPgetBestSol(scip);

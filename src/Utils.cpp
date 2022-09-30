@@ -48,11 +48,13 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
         SCIP_CALL( SCIPsetIntParam(scip,"branching/unrealistic/priority",536870911) );
         SCIP_CALL( SCIPsetIntParam(scip,"branching/vanillafullstrong/priority",0) );
         SCIP_CALL( SCIPsetIntParam(scip,"branching/pscost/priority",0) );
+        SCIP_CALL( SCIPsetIntParam(scip,"display/freq",1) );
         SCIP_CALL( SCIPsetRealParam(scip,"limits/time",1e+20) );
 
     } else{
         SCIP_CALL( SCIPsetIntParam(scip,"branching/vanillafullstrong/priority",536870911) );
         SCIP_CALL( SCIPsetIntParam(scip,"branching/unrealistic/priority",0) );
+        SCIP_CALL( SCIPsetIntParam(scip,"display/freq",100) );
         SCIP_CALL( SCIPsetRealParam(scip,"limits/time",5) );
     }
 
@@ -69,7 +71,6 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
     //SCIP_CALL( SCIPsetIntParam(scip,"nodeselection/dfs/stdpriority",900000) );
     SCIP_CALL( SCIPsetIntParam(scip,"propagating/maxroundsroot",0) );
     //SCIP_CALL( SCIPsetIntParam(scip,"propagating/maxrounds",0) );
-    SCIP_CALL( SCIPsetIntParam(scip,"display/freq",1) );
     SCIP_CALL( SCIPsetIntParam(scip,"lp/disablecutoff",1) );
 
     SCIP_CALL( SCIPsetIntParam(scip,"lp/solvefreq",1) );
