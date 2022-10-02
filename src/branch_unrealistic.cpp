@@ -53,7 +53,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
         if(depth>=maxdepth){
             SCIP_CALL( Utils::configure_scip_instance(scip, false) );
         } else{
-            SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_FAST, TRUE) );
+            SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
         }
         return SCIP_OKAY;
     }
@@ -152,7 +152,6 @@ Branch_unrealistic::computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalB
     SCIPgetRealParam(scip_copy, "limits/time", &timeLim);
     SCIPgetLongintParam(scip_copy, "limits/nodes", &nodelimit);
 
-
     SCIPsolve(scip_copy);
 
     SCIPgetRealParam(scip_copy, "limits/time", &timeLim);
@@ -162,6 +161,7 @@ Branch_unrealistic::computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalB
     switch (status){
         case SCIP_STATUS_NODELIMIT:
         case SCIP_STATUS_OPTIMAL:
+        case SCIP_STATUS_INFEASIBLE:
             score = SCIPgetNNodes(scip_copy);
             break;
         case SCIP_STATUS_TIMELIMIT:
@@ -192,43 +192,15 @@ void Branch_unrealistic::setFirstBranch(SCIP_Var *firstBranch) {
 }
 
 const SCIP_Retcode Branch_unrealistic::setBestSol(SCIP *scip, SCIP *scip_copy, SCIP_HashMap *varmap) const{
-    // get the initial vars
-    int nvars = SCIPgetNVars(scip);
-    SCIP_Var **vars = SCIPgetVars(scip);
-
-    /*SCIP_Node* nodeInit = SCIPgetCurrentNode(scip);
-    SCIP_Real lowerbound = SCIPnodeGetLowerbound(nodeInit);
-    SCIP_Real primalBound = SCIPnodeGetEstimate(nodeInit);
-
-    SCIP_Node* nodeCopy = SCIPgetCurrentNode(scip_copy);
-    SCIPupdateNodeLowerbound(scip_copy, nodeCopy, primalBound);
-
-
-
-    return SCIP_OKAY;*/
-
+    SCIP_Real objLimit;
     // get values of the best sol
     SCIP_Sol* bestSol = SCIPgetBestSol(scip);
     if(bestSol == NULL) {
-        return SCIP_OKAY;
+        objLimit = SCIPgetObjlimit(scip);
+    } else{
+        objLimit = SCIPsolGetOrigObj(bestSol);
     }
-    SCIP_Real* vals;
-    SCIPallocBlockMemoryArray(scip, &vals, nvars);
-    SCIPgetSolVals(scip, bestSol, nvars, vars, vals);
+    SCIPsetObjlimit(scip_copy, objLimit);
 
-    // copy the solution for scip_copy
-    SCIP_Sol* bestSol_copy;
-    SCIP_CALL( SCIPcreateSol(scip_copy, &bestSol_copy, NULL) );
-
-    for(int i=0; i<nvars; ++i){
-        SCIP_Var* varCopy =(SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
-        SCIPsetSolVal(scip_copy, bestSol_copy, varCopy, vals[i]);
-    }
-
-    unsigned int stored;
-    SCIPaddSol(scip_copy, bestSol_copy, &stored);
-    assert(stored);
-
-    SCIPfreeBlockMemoryArray(scip, &vals, nvars);
-
+    return SCIP_OKAY;
 }
