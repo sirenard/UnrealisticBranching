@@ -15,11 +15,11 @@
 #define 	BRANCHRULE_MAXDEPTH   -1
 #define 	BRANCHRULE_MAXBOUNDDIST   1.0
 
-Branch_unrealistic::Branch_unrealistic(SCIP *scip, int depth, int maxdepth) : ObjBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
-                                                                   BRANCHRULE_MAXBOUNDDIST), depth(depth), maxdepth(maxdepth){}
+Branch_unrealistic::Branch_unrealistic(SCIP *scip, int depth, int maxdepth, double leafTimeLimit) : ObjBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
+                                                                   BRANCHRULE_MAXBOUNDDIST), depth(depth), maxdepth(maxdepth), leafTimeLimit(leafTimeLimit){}
 
-Branch_unrealistic::Branch_unrealistic(SCIP *scip, int maxdepth) : ObjBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
-                                                                                            BRANCHRULE_MAXBOUNDDIST), depth(0), maxdepth(maxdepth){}
+Branch_unrealistic::Branch_unrealistic(SCIP *scip, int maxdepth, double leafTimeLimit) : ObjBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
+                                                                                            BRANCHRULE_MAXBOUNDDIST), depth(0), maxdepth(maxdepth), leafTimeLimit(leafTimeLimit){}
 
 
 
@@ -51,6 +51,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
         *result = SCIP_BRANCHED;
         if(depth>=maxdepth){
+            SCIP_CALL( SCIPsetRealParam(scip, "limits/time", leafTimeLimit));
             SCIP_CALL( Utils::configure_scip_instance(scip, false) );
         } else{
             SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
@@ -125,7 +126,7 @@ Branch_unrealistic::computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalB
 
     SCIPcopyParamSettings(scip, scip_copy);
 
-    auto *objbranchrule = new Branch_unrealistic(scip_copy, depth + 1, maxdepth);
+    auto *objbranchrule = new Branch_unrealistic(scip_copy, depth + 1, maxdepth, leafTimeLimit);
     SCIP_CALL(SCIPincludeObjBranchrule(scip_copy, objbranchrule, TRUE));
     Utils::configure_scip_instance(scip_copy, true);
     SCIPsetLongintParam(scip_copy, "limits/nodes", nodeLimit);
@@ -202,4 +203,8 @@ const SCIP_Retcode Branch_unrealistic::setBestSol(SCIP *scip, SCIP *scip_copy) c
     SCIPsetObjlimit(scip_copy, objLimit);
 
     return SCIP_OKAY;
+}
+
+double *Branch_unrealistic::getLeafTimeLimitPtr() {
+    return &leafTimeLimit;
 }

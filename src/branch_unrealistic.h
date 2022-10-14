@@ -20,6 +20,8 @@ private:
     static DatasetWriter *dataWriter;
     int depth, maxdepth;
     SCIP_Var* firstBranch;
+    double leafTimeLimit;
+
     SCIP_DECL_BRANCHEXECLP(scip_execlp) override;
 
     /**
@@ -40,15 +42,17 @@ private:
      */
     const SCIP_Retcode setBestSol(SCIP *scip, SCIP *scip_copy) const;
 
-    Branch_unrealistic(SCIP *scip, int depth, int maxdepth);
+    Branch_unrealistic(SCIP *scip, int depth, int maxdepth, double leafTimeLimit);
 
 public:
-    explicit Branch_unrealistic(SCIP *scip, int maxdepth=1);
+    explicit Branch_unrealistic(SCIP *scip, int maxdepth=1, double leafTimeLimit=-1);
     int* getMaxDepthPtr();
 
     void setFirstBranch(SCIP_Var *firstBranch);
 
     static void setDataWriter(DatasetWriter *dataWriter);
+
+    double *getLeafTimeLimitPtr();
 };
 
 

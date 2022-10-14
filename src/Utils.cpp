@@ -38,6 +38,20 @@ SCIP_Retcode Utils::create_scip_instance(SCIP** scipp, bool addBranchScheme) {
             NULL,
             NULL
     ));
+
+    SCIP_CALL(SCIPaddRealParam(
+            scip,
+            "branching/unrealistic/leaftimelimit",
+            "Time limit allowed to the leaf of the recursion tree (not solved using the unrealistic branching). -1 for no limit ",
+            objbranchrule->getLeafTimeLimitPtr(),
+            FALSE,
+            1,
+            -1,
+            1e+20,
+            NULL,
+            NULL
+    ));
+
     configure_scip_instance(scip, addBranchScheme);
 
     return SCIP_OKAY;
@@ -55,7 +69,7 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
         SCIP_CALL( SCIPsetIntParam(scip,"branching/vanillafullstrong/priority",536870911) );
         SCIP_CALL( SCIPsetIntParam(scip,"branching/unrealistic/priority",0) );
         SCIP_CALL( SCIPsetIntParam(scip,"display/freq",100) );
-        SCIP_CALL( SCIPsetRealParam(scip,"limits/time",1) );
+        //SCIP_CALL( SCIPsetRealParam(scip,"limits/time",1) );
     }
 
     /* for column generation instances, disable restarts */
