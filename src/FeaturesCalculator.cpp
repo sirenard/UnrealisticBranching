@@ -221,21 +221,30 @@ FeaturesCalculator::~FeaturesCalculator() {
     }
 }
 
-void FeaturesCalculator::updateBranchCounter(SCIP_NODE **node, SCIP_VAR *var) {
-    double obj = SCIP_REAL_MAX;
+void FeaturesCalculator::updateBranchCounter(SCIP_NODE **nodes, SCIP_VAR *var) {
+    double score = 1;
+    double eps = 10e-6;
+
     for(auto i:{0,1}){
-        double tmpObj = SCIPnodeGetEstimate(node[i]);
+        score *= MAX(SCIPnodeGetLowerbound(nodes[i]), eps);
+    }
+
+    /*for(auto i:{0,1}){
+        double tmpObj = SCIPnodeGetEstimate(nodes[i]);
         if(tmpObj < obj){
             obj = tmpObj;
         }
     }
-    double parentObj = SCIPnodeGetEstimate(SCIPnodeGetParent(node[0]));
-    double increase = (parentObj - obj)/obj;
+
+    double parentObj = SCIPnodeGetEstimate(SCIPnodeGetParent(nodes[0]));*/
+    double parentObj = SCIPnodeGetLowerbound(SCIPnodeGetParent(nodes[0]));
+    double increase = (score - parentObj)/parentObj;
     std::string key = std::string(SCIPvarGetName(var));
     numberBrchMap[key] = numberBrchMap[key] + 1 ;
     int n = numberBrchMap[SCIPvarGetName(var)];
     double* statistics = objectiveIncreaseStaticsMap[SCIPvarGetName(var)];
 
+    // update min/max
     if(increase < statistics[0] || n == 1){
         statistics[0] = increase;
     }

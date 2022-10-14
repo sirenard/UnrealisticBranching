@@ -37,9 +37,8 @@ private:
 
     /**
      * translate the best sol of scip to scip_copy
-     * @param varmap map that translates var of scip into var of scip_copy
      */
-    const SCIP_Retcode setBestSol(SCIP *scip, SCIP *scip_copy, SCIP_HashMap *varmap) const;
+    const SCIP_Retcode setBestSol(SCIP *scip, SCIP *scip_copy) const;
 
     Branch_unrealistic(SCIP *scip, int depth, int maxdepth);
 

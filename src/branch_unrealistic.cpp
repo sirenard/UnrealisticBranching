@@ -100,8 +100,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
 
     if(dataWriter && depth==0) {
-        dataWriter->addNode(scip, children, nlpcands, varScores, lpcands,
-                            bestScore, bestcand);
+        dataWriter->addNode(scip, children, nlpcands, varScores, lpcands, bestcand);
     }
 
     SCIPfreeBlockMemoryArray(scip, &varScores, nlpcands);
@@ -144,7 +143,7 @@ Branch_unrealistic::computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalB
 
     objbranchrule->setFirstBranch(varbrch_copy);
 
-    setBestSol(scip, scip_copy, varmap);
+    setBestSol(scip, scip_copy);
 
     double timeLim;
     SCIP_Longint nodelimit;
@@ -191,7 +190,7 @@ void Branch_unrealistic::setFirstBranch(SCIP_Var *firstBranch) {
     Branch_unrealistic::firstBranch = firstBranch;
 }
 
-const SCIP_Retcode Branch_unrealistic::setBestSol(SCIP *scip, SCIP *scip_copy, SCIP_HashMap *varmap) const{
+const SCIP_Retcode Branch_unrealistic::setBestSol(SCIP *scip, SCIP *scip_copy) const{
     SCIP_Real objLimit;
     // get values of the best sol
     SCIP_Sol* bestSol = SCIPgetBestSol(scip);
