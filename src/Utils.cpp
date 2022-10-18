@@ -7,6 +7,8 @@
 #include "nodesel_random.h"
 #include "branch_unrealistic.h"
 #include "dialog_generateDataset.h"
+#include "branch_unrealisticTrained.h"
+#include "dialog_loadModel.h"
 
 using namespace scip;
 
@@ -25,7 +27,11 @@ SCIP_Retcode Utils::create_scip_instance(SCIP** scipp, bool addBranchScheme) {
     Branch_unrealistic *objbranchrule = new Branch_unrealistic(scip);
     SCIP_CALL(SCIPincludeObjBranchrule(scip, objbranchrule, TRUE));
 
+    Branch_unrealisticTrained *objbranchruleTrained = new Branch_unrealisticTrained(scip);
+    SCIP_CALL(SCIPincludeObjBranchrule(scip, objbranchruleTrained, TRUE));
+
     SCIP_CALL(SCIPincludeObjDialog(scip, new DialogGenerateDataset(scip), TRUE));
+    SCIP_CALL(SCIPincludeObjDialog(scip, new DialogLoadModel(scip), TRUE));
     SCIP_CALL(SCIPaddIntParam(
             scip,
             "branching/unrealistic/recursiondepth",

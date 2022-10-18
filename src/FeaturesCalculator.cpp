@@ -312,3 +312,28 @@ const int FeaturesCalculator::getNObjectiveIncreaseStatics() const {
     return nObjectiveIncreaseStatics;
 }
 
+const std::vector<double> FeaturesCalculator::getFeatures(SCIP_Var *var) {
+    std::vector<double> res;
+    int count=0;
+
+    int arraySizes[3] = {
+            getNStaticFeatures(),
+            getNDynamicFeatures(),
+            getNObjectiveIncreaseStatics()
+    };
+    const double* features[3] = {
+            getStaticFeatures(var),
+            getDynamicProblemFeatures(var),
+            getDynamicOptimizationFeatures(var)
+    };
+
+    for(int i=0; i<3; ++i){
+        //line += "start " + std::to_string(i) + ";";
+        for(int k=0; k<arraySizes[i]; ++k){
+            res.push_back(features[i][k]);
+        }
+    }
+
+    return res;
+}
+

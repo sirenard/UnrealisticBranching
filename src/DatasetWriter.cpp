@@ -37,6 +37,7 @@ DatasetWriter::~DatasetWriter() {
 }
 
 void DatasetWriter::writeLine(SCIP_VAR *var, double score) {
+    // TODO: use getFeatures instead
     int arraySizes[3] = {
         featuresCalculator->getNStaticFeatures(),
         featuresCalculator->getNDynamicFeatures(),

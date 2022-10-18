@@ -7,6 +7,7 @@
 RegressionModel::RegressionModel(std::string path) {
     std::fstream f(path);
     deserialize(rf, f);
+    f.close();
 }
 
 void RegressionModel::train(std::string csvPath) {
@@ -14,10 +15,13 @@ void RegressionModel::train(std::string csvPath) {
     std::vector <double> y;
 
     readDataSet(x, y, csvPath);
-    dlib::random_forest_regression_trainer<dlib::dense_feature_extractor> trainer;
+    /*dlib::random_forest_regression_trainer<dlib::dense_feature_extractor> trainer;
     trainer.be_verbose();
-    rf = trainer.train(x, y);
-    //std::cout << x(9, 8) << std::endl;
+    std::vector<double> loo;
+    rf = trainer.train(x, y, loo);*/
+    std::fstream f("../rf1.dat");
+    deserialize(rf, f);
+    f.close();
 
 }
 
@@ -35,7 +39,6 @@ void RegressionModel::readDataSet(std::vector<sample_type> &x, std::vector<doubl
     }
 
     --nCol;
-
     data.close();
     data.open(path);
 
@@ -73,4 +76,15 @@ void RegressionModel::save(std::fstream out) {
 
 RegressionModel::RegressionModel() {
 
+}
+
+double RegressionModel::predictScore(const std::vector<double> &features) {
+    sample_type x;
+    x.set_size(features.size());
+
+    for(int i=0; i<features.size(); ++i) {
+        x(i) = features[i];
+    }
+
+    return rf(x);
 }

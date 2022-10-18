@@ -7,6 +7,7 @@
 
 #include <string>
 #include <map>
+#include <vector>
 #include "scip/def.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
@@ -62,6 +63,7 @@ public:
 
     const int getNObjectiveIncreaseStatics() const;
 
+    const std::vector<double> getFeatures(SCIP_Var *var);
     virtual ~FeaturesCalculator();
 };
 

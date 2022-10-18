@@ -16,6 +16,7 @@ public:
     RegressionModel(std::string path);
     void train(std::string csvPath);
     void save(std::fstream out);
+    double predictScore(const std::vector<double> &features);
 };
 
 
