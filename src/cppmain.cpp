@@ -6,6 +6,7 @@
 
 #include "Utils.h"
 #include "FeaturesCalculator.h"
+#include "RegressionModel.h"
 
 
 using namespace scip;

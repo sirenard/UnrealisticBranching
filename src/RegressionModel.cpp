@@ -8,9 +8,10 @@ RegressionModel::RegressionModel(std::string path) {
     std::fstream f(path);
     deserialize(rf, f);
     f.close();
+    nTrees = rf.get_num_trees();
 }
 
-void RegressionModel::train(std::string csvPath) {
+double RegressionModel::train(std::string csvPath){
     std::vector<sample_type> x;
     std::vector <double> y;
 
@@ -18,16 +19,28 @@ void RegressionModel::train(std::string csvPath) {
     dlib::random_forest_regression_trainer<dlib::dense_feature_extractor> trainer;
     trainer.be_verbose();
     std::vector<double> loo;
+    trainer.set_num_trees(nTrees);
     rf = trainer.train(x, y, loo);
 
+
+    double mse = 0;
+    for(int i=0; i < loo.size(); i++) {
+        mse += std::pow(loo[i]-y[i], 2);
+    }
+    mse /= loo.size();
+
+    return mse;
 }
 
 void RegressionModel::readDataSet(std::vector<sample_type> &x, std::vector<double> &y, std::string path) {
     std::ifstream data(path);
+    bool success = data.is_open();
+    if(!success){
+        throw std::invalid_argument("Cannot open file " + path);
+    }
     std::string line;
     std::string cell;
 
-    bool firstLine = true;
     int nCol=0;
     std::getline(data, line);
     std::stringstream lineStream(line);
@@ -67,11 +80,11 @@ void RegressionModel::readDataSet(std::vector<sample_type> &x, std::vector<doubl
     data.close();
 }
 
-void RegressionModel::save(std::fstream out) {
+void RegressionModel::save(std::fstream &out) {
     serialize(rf, out);
 }
 
-RegressionModel::RegressionModel() {
+RegressionModel::RegressionModel(int nTrees): nTrees(nTrees)  {
 
 }
 
@@ -84,4 +97,8 @@ double RegressionModel::predictScore(const std::vector<double> &features) {
     }
 
     return rf(x);
+}
+
+void RegressionModel::setNTrees(int newNTrees) {
+    nTrees = newNTrees;
 }

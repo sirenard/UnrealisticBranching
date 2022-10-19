@@ -9,6 +9,7 @@
 #include "dialog_generateDataset.h"
 #include "branch_unrealisticTrained.h"
 #include "dialog_loadModel.h"
+#include "dialog_trainmodel.h"
 
 using namespace scip;
 
@@ -32,6 +33,7 @@ SCIP_Retcode Utils::create_scip_instance(SCIP** scipp, bool addBranchScheme) {
 
     SCIP_CALL(SCIPincludeObjDialog(scip, new DialogGenerateDataset(scip), TRUE));
     SCIP_CALL(SCIPincludeObjDialog(scip, new DialogLoadModel(scip), TRUE));
+    SCIP_CALL(SCIPincludeObjDialog(scip, new DialogTrainModel(scip), TRUE));
     SCIP_CALL(SCIPaddIntParam(
             scip,
             "branching/unrealistic/recursiondepth",

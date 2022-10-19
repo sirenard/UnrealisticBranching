@@ -10,12 +10,20 @@ typedef dlib::matrix<double,0 ,1> sample_type;
 
 class RegressionModel {
     dlib::random_forest_regression_function<> rf;
-    void readDataSet( std::vector<sample_type> &x, std::vector<double> &y, std::string path);
+    int nTrees;
+    static void readDataSet( std::vector<sample_type> &x, std::vector<double> &y, std::string path);
 public:
-    RegressionModel();
+    RegressionModel(int nTrees=100);
     RegressionModel(std::string path);
-    void train(std::string csvPath);
-    void save(std::fstream out);
+
+    /**
+     * Train a random forest and output the mean square error of the training using a leave one out approach.
+     * @param csvPath path to the dataset
+     * @return mse
+     */
+    double train(std::string csvPath);
+    void save(std::fstream &out);
+    void setNTrees(int newNTrees);
     double predictScore(const std::vector<double> &features);
 };
 

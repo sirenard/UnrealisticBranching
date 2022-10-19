@@ -22,7 +22,7 @@ include_directories(${SCIP_INCLUDE_DIRS})
 
 add_executable(scip_learning
    src/cppmain.cpp
-   src/nodesel_random.cpp src/branch_unrealistic.cpp src/branch_unrealistic.h src/Utils.cpp src/Utils.h src/DatasetWriter.cpp src/DatasetWriter.h src/FeaturesCalculator.cpp src/FeaturesCalculator.h src/dialog_generateDataset.cpp src/dialog_generateDataset.h src/RegressionModel.cpp src/RegressionModel.h src/branch_unrealisticTrained.cpp src/branch_unrealisticTrained.h src/dialog_loadModel.cpp src/dialog_loadModel.h)
+   src/nodesel_random.cpp src/branch_unrealistic.cpp src/branch_unrealistic.h src/Utils.cpp src/Utils.h src/DatasetWriter.cpp src/DatasetWriter.h src/FeaturesCalculator.cpp src/FeaturesCalculator.h src/dialog_generateDataset.cpp src/dialog_generateDataset.h src/RegressionModel.cpp src/RegressionModel.h src/branch_unrealisticTrained.cpp src/branch_unrealisticTrained.h src/dialog_loadModel.cpp src/dialog_loadModel.h src/dialog_trainmodel.cpp src/dialog_trainmodel.h)
 
 target_link_libraries(scip_learning ${SCIP_LIBRARIES})
 target_link_libraries(scip_learning  dlib::dlib)
