@@ -37,7 +37,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealisticTrained::scip_execlp) {
     // get branching candidates
     SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, nullptr, &lpcandsfrac, nullptr, &nlpcands, nullptr) );
 
-    featuresCalculator->computeDynamicProblemFeatures(scip);
+    featuresCalculator->computeDynamicProblemFeatures(scip, lpcands, nlpcands);
     // estimate a score for each variable
     for (int i = 0; i < nlpcands; ++i) {
         std::vector<double> features = featuresCalculator->getFeatures(lpcands[i]);

@@ -266,16 +266,17 @@ void FeaturesCalculator::updateBranchCounter(SCIP_NODE **nodes, SCIP_VAR *var) {
     nbrchs++;
 }
 
-void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip) {
-    SCIP_Var **vars = SCIPgetVars(scip);
+
+void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip, SCIP_Var **vars, int varsSize) {
+    SCIP_Var **allVars = SCIPgetVars(scip);
 
     int nFixedVar = 0;
     for(int i=0; i<nvars; ++i){
-        if(SCIPvarGetUbGlobal(vars[i]) == SCIPvarGetLbGlobal(vars[i]))
+        if(SCIPvarGetUbGlobal(allVars[i]) == SCIPvarGetLbGlobal(allVars[i]))
             ++nFixedVar;
     }
 
-    for(int i=0; i<nvars; ++i){
+    for(int i=0; i<varsSize; ++i){
         std::string key = std::string(SCIPvarGetName(vars[i]));
         auto* features = dynamicFeaturesMap[key];
         features[0] = (double)nFixedVar/nvars;
@@ -286,6 +287,10 @@ void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip) {
         else
             features[2] = 0;
     }
+}
+
+void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip) {
+    computeDynamicProblemFeatures(scip, SCIPgetVars(scip), nvars);
 }
 
 const double *FeaturesCalculator::getStaticFeatures(SCIP_VAR *var) {

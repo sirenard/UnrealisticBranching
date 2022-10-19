@@ -52,6 +52,7 @@ public:
      */
     FeaturesCalculator(SCIP *scip, int signB, int signC, int signA);
     void updateBranchCounter(SCIP_NODE **nodes, SCIP_VAR *var);
+    void computeDynamicProblemFeatures(SCIP *scip, SCIP_Var** vars, int varsSize);
     void computeDynamicProblemFeatures(SCIP *scip);
     const double* getStaticFeatures(SCIP_VAR *var);
     const double *getDynamicProblemFeatures(SCIP_VAR *var);
