@@ -27,7 +27,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
     SCIP_VAR** lpcands;
     SCIP_Real* lpcandsfrac;
     int nlpcands; // number of candidates
-    int bestcand = 0;
+    std::vector<int> bestcands;
     int bestScore = -1;
     SCIP_BoundType bestBranchSide; // which child must be cut from the tree (doesn't lead to the optimal solution)
 
@@ -79,7 +79,12 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
         if (bestScore == -1 || score < bestScore) {
             bestScore = score;
-            bestcand = i;
+            bestcands.clear();
+
+        }
+
+        if(score == bestScore){
+            bestcands.push_back(i);
         }
 
         if (!depth)
@@ -89,6 +94,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
     }
 
+    int bestcand = bestcands[rand() % bestcands.size()];
     if (!depth) {
         SCIPdebugMsg(scip, ("Var to branch: " + std::to_string(bestcand + 1) + "; " +
                             std::string(SCIPvarGetName(lpcands[bestcand])) + "; Score: " +
@@ -114,7 +120,13 @@ SCIP_RETCODE
 Branch_unrealistic::computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalBounds, int bestScore,
                                  SCIP_Real fracValue, SCIP_VAR *varbrch, SCIP_BoundType &branchSide) const {
 
-    int nodeLimit = (dataWriter && depth==0) || bestScore<=0?-1:bestScore; // if realNnodes data are not used, no need to run more than the best realNnodes
+    int nodeLimit;
+
+    if((dataWriter && depth==0) || bestScore<0 || bestScore == INT_MAX){
+        nodeLimit = -1; // if realNnodes data are not used, no need to run more than the best realNnodes
+    } else{
+        nodeLimit = bestScore + 1;
+    }
 
     SCIP *scip_copy;
     SCIP_Bool valid;

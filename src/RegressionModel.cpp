@@ -15,13 +15,10 @@ void RegressionModel::train(std::string csvPath) {
     std::vector <double> y;
 
     readDataSet(x, y, csvPath);
-    /*dlib::random_forest_regression_trainer<dlib::dense_feature_extractor> trainer;
+    dlib::random_forest_regression_trainer<dlib::dense_feature_extractor> trainer;
     trainer.be_verbose();
     std::vector<double> loo;
-    rf = trainer.train(x, y, loo);*/
-    std::fstream f("../rf1.dat");
-    deserialize(rf, f);
-    f.close();
+    rf = trainer.train(x, y, loo);
 
 }
 
