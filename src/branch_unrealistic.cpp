@@ -164,22 +164,29 @@ Branch_unrealistic::computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalB
     SCIPgetRealParam(scip_copy, "limits/time", &timeLim);
     SCIPgetLongintParam(scip_copy, "limits/nodes", &nodelimit);
 
-    SCIPsolve(scip_copy);
-
-    SCIPgetRealParam(scip_copy, "limits/time", &timeLim);
-
-    SCIP_STATUS status = SCIPgetStatus(scip_copy);
     score = INT_MAX;
-    switch (status){
-        case SCIP_STATUS_NODELIMIT:
-        case SCIP_STATUS_OPTIMAL:
-        case SCIP_STATUS_INFEASIBLE:
-            score = SCIPgetNNodes(scip_copy);
-            break;
-        case SCIP_STATUS_TIMELIMIT:
-            SCIPdebugMsg(scip, ("Time limit: " + std::to_string(SCIPgetTotalTime(scip_copy)) + "\n").c_str());
-            break;
-
+    try {
+        /**
+         * Solving the copy crash sometimes randomly. When it happens,
+         * we consider that the score is maximum (INT_MAX) and not
+         * considered.
+         * TODO: do it better
+         */
+        SCIPsolve(scip_copy);
+        SCIP_STATUS status = SCIPgetStatus(scip_copy);
+        switch (status){
+            case SCIP_STATUS_NODELIMIT:
+            case SCIP_STATUS_OPTIMAL:
+            case SCIP_STATUS_INFEASIBLE:
+                score = SCIPgetNNodes(scip_copy);
+                break;
+            case SCIP_STATUS_TIMELIMIT:
+                SCIPdebugMsg(scip, ("Time limit: " + std::to_string(SCIPgetTotalTime(scip_copy)) + "\n").c_str());
+                break;
+        }
+    } catch (std::exception &e){
+        SCIPerrorMessage("Error SCIPsolve \n");
+        return SCIP_OKAY;
     }
 
     // free memory allocated
