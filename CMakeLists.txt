@@ -22,7 +22,7 @@ include_directories(${SCIP_INCLUDE_DIRS})
 
 add_executable(scip_learning
    src/cppmain.cpp
-   src/nodesel_random.cpp src/branch_unrealistic.cpp src/branch_unrealistic.h src/Utils.cpp src/Utils.h src/DatasetWriter.cpp src/DatasetWriter.h src/FeaturesCalculator.cpp src/FeaturesCalculator.h src/dialog_generateDataset.cpp src/dialog_generateDataset.h src/RegressionModel.cpp src/RegressionModel.h src/branch_unrealisticTrained.cpp src/branch_unrealisticTrained.h src/dialog_loadModel.cpp src/dialog_loadModel.h src/dialog_trainmodel.cpp src/dialog_trainmodel.h)
+   src/nodesel_random.cpp src/branch_unrealistic.cpp src/branch_unrealistic.h src/Utils.cpp src/Utils.h src/DatasetWriter.cpp src/DatasetWriter.h src/FeaturesCalculator.cpp src/FeaturesCalculator.h src/dialog_generateDataset.cpp src/dialog_generateDataset.h src/RegressionModel.cpp src/RegressionModel.h src/branch_unrealisticTrained.cpp src/branch_unrealisticTrained.h src/dialog_loadModel.cpp src/dialog_loadModel.h src/dialog_trainmodel.cpp src/dialog_trainmodel.h src/mpi/Slave.cpp src/mpi/Slave.h src/mpi/Master.cpp src/mpi/Master.h src/mpi/Node.cpp src/mpi/Node.h)
 
 target_link_libraries(scip_learning ${SCIP_LIBRARIES})
 target_link_libraries(scip_learning  dlib::dlib)
@@ -33,6 +33,12 @@ if(ZLIB)
         target_link_libraries(scip_learning ${ZLIB_LIBRARIES})
     endif()
 endif()
+
+find_package(MPI REQUIRED)
+include_directories(${MPI_INCLUDE_PATH})
+
+SET(CMAKE_CPP_COMPILER mpicxx)
+SET(CMAKE_CXX_COMPILER mpicxx)
 
 if( TARGET examples )
     add_dependencies( examples scip_learning )

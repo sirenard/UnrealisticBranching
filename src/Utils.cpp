@@ -108,3 +108,10 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
     SCIP_CALL( SCIPsetBoolParam(scip,"benders/cutlpsol",FALSE) );
     return SCIP_OKAY;
 }
+
+SCIP_Retcode Utils::configure_slave_scip_instance(SCIP *scip) {
+    SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel",0));
+    SCIP_CALL( SCIPsetIntParam(scip, "branching/unrealistic/recursiondepth",0));
+
+    return SCIP_OKAY;
+}

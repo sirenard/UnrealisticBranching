@@ -8,6 +8,8 @@
 #include <sstream>
 #include "branch_unrealistic.h"
 #include "Utils.h"
+#include "mpi/Node.h"
+#include "mpi/Master.h"
 
 #define 	BRANCHRULE_NAME   "unrealistic"
 #define 	BRANCHRULE_DESC   "unrealistic branching"
@@ -45,12 +47,12 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
     if(firstBranch!=nullptr){
         //SCIPdebugMsg(scip, ("nnodes: " + std::to_string(SCIPgetNSols(scip) )+ "\n").c_str());
         SCIP_CALL( SCIPbranchVar(scip, firstBranch, nullptr, NULL, nullptr) );
-
-
         firstBranch=nullptr;
 
         *result = SCIP_BRANCHED;
+
         if(depth>=maxdepth){
+            std::cout << "ok " << depth << " - " << maxdepth << std::endl;
             SCIP_CALL( SCIPsetRealParam(scip, "limits/time", leafTimeLimit));
             SCIP_CALL( Utils::configure_scip_instance(scip, false) );
         } else{
@@ -59,42 +61,52 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
         return SCIP_OKAY;
     }
 
-    // computing realNnodes for each variable
-    for (int i = 0; i < nlpcands; ++i) {
-        int score;
-        SCIP_BoundType branchSide;
-        SCIP_Real childPrimalBounds[2];
-        assert(lpcands[i] != nullptr);
+    std::cout << "NOK " << depth << " - " << maxdepth << std::endl;
 
-        SCIP_CALL(computeScore(
-                scip,
-                score,
-                childPrimalBounds,
-                bestScore,
-                lpcandsfrac[i],
-                lpcands[i],
-                branchSide));
 
-        varScores[i] = score;
+    Node* node = Node::getInstance();
+    if(depth<maxdepth-1 || node->getRank()) { // No parallelization possible if we do not treat a leaf or if we are a slave
+        // computing realNnodes for each variable
+        for (int i = 0; i < nlpcands; ++i) {
+            int score;
+            SCIP_BoundType branchSide;
+            SCIP_Real childPrimalBounds[2];
+            assert(lpcands[i] != nullptr);
 
-        if (bestScore == -1 || score < bestScore) {
-            bestScore = score;
-            bestcands.clear();
+            SCIP_CALL(computeScore(
+                    scip,
+                    score,
+                    childPrimalBounds,
+                    bestScore,
+                    lpcandsfrac[i],
+                    lpcands[i],
+                    branchSide));
+
+            varScores[i] = score;
+
+            if (bestScore == -1 || score < bestScore) {
+                bestScore = score;
+                bestcands.clear();
+
+            }
+
+            if (score == bestScore) {
+                bestcands.push_back(i);
+            }
+
+            if (!depth)
+                SCIPdebugMsg(scip, (std::string(depth, '\t') + std::to_string(i + 1) + "/" + std::to_string(nlpcands) +
+                                    " (score: " + std::to_string(score) + ") (var: " + SCIPvarGetName(lpcands[i]) +
+                                    ")\n").c_str());
 
         }
-
-        if(score == bestScore){
-            bestcands.push_back(i);
-        }
-
-        if (!depth)
-            SCIPdebugMsg(scip, (std::string(depth, '\t') + std::to_string(i + 1) + "/" + std::to_string(nlpcands) +
-                                " (score: " + std::to_string(score) + ") (var: " + SCIPvarGetName(lpcands[i]) +
-                                ")\n").c_str());
-
+    } else{ // the master must balance the computation of the score
+        Master* master = dynamic_cast<Master *>(Master::getInstance());
+        master->computeScores(scip, lpcands, nlpcands, bestcands, bestScore);
     }
 
     int bestcand = bestcands[rand() % bestcands.size()];
+    //int bestcand = 0;
     if (!depth) {
         SCIPdebugMsg(scip, ("Var to branch: " + std::to_string(bestcand + 1) + "; " +
                             std::string(SCIPvarGetName(lpcands[bestcand])) + "; Score: " +
