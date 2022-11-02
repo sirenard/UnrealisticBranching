@@ -39,7 +39,7 @@ SCIP_DECL_DIALOGEXEC(DialogLoadModel::scip_exec) {
     }
     TEST_END_DIALOG(tmp);
     signA = atoi(tmp);
-    //SCIPfreeBufferArray(scip, &tmp);
+    //SCIPfreeBufferArray(scipmain, &tmp);
 
     SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter input problems signB: ", &tmp, &endoffile) );
     if( endoffile ){
@@ -48,7 +48,7 @@ SCIP_DECL_DIALOGEXEC(DialogLoadModel::scip_exec) {
     }
     TEST_END_DIALOG(tmp);
     signB = atoi(tmp);
-    //SCIPfreeBufferArray(scip, &tmp);
+    //SCIPfreeBufferArray(scipmain, &tmp);
 
 
     SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter input problems signC: ", &tmp, &endoffile) );

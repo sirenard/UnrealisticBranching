@@ -41,11 +41,9 @@ private:
                               SCIP_Real fracValue, SCIP_VAR *varbrch, SCIP_BoundType &branchSide) const;
 
     /**
-     * translate the best sol of scip to scip_copy
+     * translate the best sol of scipmain to scip_copy
      */
     const SCIP_Retcode setBestSol(SCIP *scip, SCIP *scip_copy) const;
-
-    Branch_unrealistic(SCIP *scip, int depth, int maxdepth, double leafTimeLimit);
 
 public:
     explicit Branch_unrealistic(SCIP *scip, int maxdepth=1, double leafTimeLimit=-1);
@@ -56,6 +54,8 @@ public:
     static void setDataWriter(DatasetWriter *dataWriter);
 
     double *getLeafTimeLimitPtr();
+
+    Branch_unrealistic(SCIP *scip, int depth, int maxdepth, double leafTimeLimit);
 };
 
 

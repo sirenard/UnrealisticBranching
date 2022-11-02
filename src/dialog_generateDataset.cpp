@@ -42,7 +42,7 @@ SCIP_DECL_DIALOGEXEC(DialogGenerateDataset::scip_exec){
     }
     TEST_END_DIALOG(tmp);
     signA = atoi(tmp);
-    //SCIPfreeBufferArray(scip, &tmp);
+    //SCIPfreeBufferArray(scipmain, &tmp);
 
     SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter input problems signB: ", &tmp, &endoffile) );
     if( endoffile ){
@@ -51,7 +51,7 @@ SCIP_DECL_DIALOGEXEC(DialogGenerateDataset::scip_exec){
     }
     TEST_END_DIALOG(tmp);
     signB = atoi(tmp);
-    //SCIPfreeBufferArray(scip, &tmp);
+    //SCIPfreeBufferArray(scipmain, &tmp);
 
 
     SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter input problems signC: ", &tmp, &endoffile) );
@@ -61,7 +61,7 @@ SCIP_DECL_DIALOGEXEC(DialogGenerateDataset::scip_exec){
     }
     TEST_END_DIALOG(tmp);
     signC = atoi(tmp);
-    //SCIPfreeBufferArray(scip, &tmp);
+    //SCIPfreeBufferArray(scipmain, &tmp);
 
     SCIP_CALL(SCIPreadProb(
             scip,
@@ -75,15 +75,15 @@ SCIP_DECL_DIALOGEXEC(DialogGenerateDataset::scip_exec){
     writer.setFeaturesCalculator(&featuresCalculator);
 
     Branch_unrealistic::setDataWriter(&writer);
-    //Utils::configure_scip_instance(scip, true);
+    //Utils::configure_scip_instance(scipmain, true);
 
     SCIP_CALL( SCIPsolve(scip) );
 
-    //SCIP_Longint score = SCIPgetNNodes(scip);
-    //SCIPinfoMessage(scip, NULL, ("Solved in " + std::to_string(score) + " nodes\n").c_str());
+    //SCIP_Longint score = SCIPgetNNodes(scipmain);
+    //SCIPinfoMessage(scipmain, NULL, ("Solved in " + std::to_string(score) + " nodes\n").c_str());
 
-    //SCIPfreeBufferArray(scip, &inputfilename);
-    //SCIPfreeBufferArray(scip, &outputfilename);
+    //SCIPfreeBufferArray(scipmain, &inputfilename);
+    //SCIPfreeBufferArray(scipmain, &outputfilename);
 
     writer.setFeaturesCalculator(nullptr);
 

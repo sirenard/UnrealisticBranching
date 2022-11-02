@@ -17,6 +17,8 @@ public:
     void run() override;
 
     void createScipInstance();
+
+    SCIP *retrieveNode();
 };
 
 

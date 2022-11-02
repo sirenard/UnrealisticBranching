@@ -36,7 +36,7 @@ FeaturesCalculator::FeaturesCalculator(SCIP *scip, int signB, int signC, int sig
 
         auto* features = new double[nStaticFeatures];
         std::fill(features, features+nStaticFeatures, 0);
-        //SCIPallocBlockMemoryArray(scip, &features, nfeatures);
+        //SCIPallocBlockMemoryArray(scipmain, &features, nfeatures);
 
         //staticFeaturesMap.insert(std::pair<const char*, const double*>(SCIPvarGetName(vars[i]), features));
         std::string varName = "t_" + std::string(SCIPvarGetName(vars[i]));
@@ -89,7 +89,7 @@ FeaturesCalculator::FeaturesCalculator(SCIP *scip, int signB, int signC, int sig
             computeM2Features(signC, consCoef, i, featureIndex, features, objCoefVari, val,
                               indexOffset);
 
-            //SCIPdebugMessagePrint(scip, (varName + ", cons: " + std::to_string(j) + " -> " + std::to_string(features[3] == 1.7976931348623157e+308) + "\n").c_str());
+            //SCIPdebugMessagePrint(scipmain, (varName + ", cons: " + std::to_string(j) + " -> " + std::to_string(features[3] == 1.7976931348623157e+308) + "\n").c_str());
 
             indexOffset += 2*(1+(signC==0));
             computeM3Features(signA, consCoef, i, featureIndex, features, indexOffset, localIndexOffset, val);

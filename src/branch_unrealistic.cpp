@@ -45,14 +45,13 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
     // an instruction already exists for the first branching (given by the parent)
     if(firstBranch!=nullptr){
-        //SCIPdebugMsg(scip, ("nnodes: " + std::to_string(SCIPgetNSols(scip) )+ "\n").c_str());
+        //SCIPdebugMsg(scipmain, ("nnodes: " + std::to_string(SCIPgetNSols(scipmain) )+ "\n").c_str());
         SCIP_CALL( SCIPbranchVar(scip, firstBranch, nullptr, NULL, nullptr) );
         firstBranch=nullptr;
 
         *result = SCIP_BRANCHED;
 
         if(depth>=maxdepth){
-            std::cout << "ok " << depth << " - " << maxdepth << std::endl;
             SCIP_CALL( SCIPsetRealParam(scip, "limits/time", leafTimeLimit));
             SCIP_CALL( Utils::configure_scip_instance(scip, false) );
         } else{
@@ -61,12 +60,8 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
         return SCIP_OKAY;
     }
 
-    std::cout << "NOK " << depth << " - " << maxdepth << std::endl;
-
-
     Node* node = Node::getInstance();
-    //if(depth<maxdepth-1 || node->getRank()) { // No parallelization possible if we do not treat a leaf or if we are a slave
-    if(true){
+    if(depth<maxdepth-1 || !node->isMaster()) { // No parallelization possible if we do not treat a leaf or if we are a slave
         // computing realNnodes for each variable
         for (int i = 0; i < nlpcands; ++i) {
             int score;
@@ -242,12 +237,11 @@ double *Branch_unrealistic::getLeafTimeLimitPtr() {
 }
 
 SCIP_DECL_BRANCHINIT(Branch_unrealistic::scip_init){
+    SCIP_CALL( scip::ObjBranchrule::scip_init(scip, branchrule) );
     Node *node = Node::getInstance();
     if(node->isMaster()){
-        std::cout << "Init" << std::endl;
         Master *master = dynamic_cast<Master *>(node);
         master->broadcastInstance(scip);
-        std::cout << "Done" << std::endl;
 
     }
     return SCIP_OKAY;

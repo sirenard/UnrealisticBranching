@@ -24,9 +24,8 @@ protected:
         double rhs;
         int nVar;
     };
-    const unsigned rank;
     MPI_Status status;
-    SCIP* scip;
+    SCIP* scipmain;
 
 public:
     explicit Node(unsigned rank);
@@ -37,6 +36,8 @@ public:
     const unsigned int getRank() const;
 
     virtual void run() = 0;
+
+    unsigned rank;
 };
 
 

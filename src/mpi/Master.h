@@ -19,6 +19,8 @@ public:
     void computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::vector<int> &bestcands, int &bestScore);
 
     void broadcastInstance(SCIP *scip);
+
+    void sendNode(SCIP *scip, int slaveId, int nodeLimit, SCIP_VAR *varbrch);
 };
 
 

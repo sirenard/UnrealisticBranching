@@ -77,7 +77,7 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
         SCIP_CALL( SCIPsetIntParam(scip,"branching/vanillafullstrong/priority",536870911) );
         SCIP_CALL( SCIPsetIntParam(scip,"branching/unrealistic/priority",0) );
         SCIP_CALL( SCIPsetIntParam(scip,"display/freq",100) );
-        //SCIP_CALL( SCIPsetRealParam(scip,"limits/time",1) );
+        //SCIP_CALL( SCIPsetRealParam(scipmain,"limits/time",1) );
     }
 
     /* for column generation instances, disable restarts */
@@ -87,18 +87,18 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
     /* turn off all separation algorithms */
     SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE) );
     SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
-    //SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+    //SCIP_CALL( SCIPsetHeuristics(scipmain, SCIP_PARAMSETTING_OFF, TRUE) );
 
-    //SCIP_CALL( SCIPsetIntParam(scip,"nodeselection/random/stdpriority",900000) );
-    //SCIP_CALL( SCIPsetIntParam(scip,"nodeselection/dfs/stdpriority",900000) );
+    //SCIP_CALL( SCIPsetIntParam(scipmain,"nodeselection/random/stdpriority",900000) );
+    //SCIP_CALL( SCIPsetIntParam(scipmain,"nodeselection/dfs/stdpriority",900000) );
     SCIP_CALL( SCIPsetIntParam(scip,"propagating/maxroundsroot",0) );
-    //SCIP_CALL( SCIPsetIntParam(scip,"propagating/maxrounds",0) );
+    //SCIP_CALL( SCIPsetIntParam(scipmain,"propagating/maxrounds",0) );
     SCIP_CALL( SCIPsetIntParam(scip,"lp/disablecutoff",1) );
 
     SCIP_CALL( SCIPsetIntParam(scip,"lp/solvefreq",1) );
     SCIP_CALL( SCIPsetIntParam(scip,"lp/threads",1) );
-    //SCIP_CALL( SCIPsetLongintParam(scip,"lp/iterlim",1) );
-    //SCIP_CALL( SCIPsetLongintParam(scip,"lp/rootiterlim",1) );
+    //SCIP_CALL( SCIPsetLongintParam(scipmain,"lp/iterlim",1) );
+    //SCIP_CALL( SCIPsetLongintParam(scipmain,"lp/rootiterlim",1) );
 
     SCIP_CALL( SCIPsetIntParam(scip,"separating/maxruns",0) );
     SCIP_CALL( SCIPsetIntParam(scip,"pricing/maxvars",1) );

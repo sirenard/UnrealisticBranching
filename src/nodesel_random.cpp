@@ -30,12 +30,12 @@ SCIP_DECL_NODESELSELECT(NodeSelRandom::scip_select)
 
 
     *selnode = SCIPgetBestNode(scip);
-    //SCIPcutoffNode(scip, *selnode);
+    //SCIPcutoffNode(scipmain, *selnode);
 
-    //SCIPdebugMsg(scip, ("Selection: " + std::to_string(    SCIPnodeGetNumber(*selnode)) + "\n").c_str());
+    //SCIPdebugMsg(scipmain, ("Selection: " + std::to_string(    SCIPnodeGetNumber(*selnode)) + "\n").c_str());
     //std::string msg = get_node_hierarchy(*selnode) + "\n";
-    //SCIPdebugMsg(scip, msg.c_str());
-    //SCIPprintNodeRootPath(scip, *selnode, NULL);
+    //SCIPdebugMsg(scipmain, msg.c_str());
+    //SCIPprintNodeRootPath(scipmain, *selnode, NULL);
 
     //SCIPnodeIsPropagatedAgain(*selnode);
 
@@ -54,7 +54,7 @@ SCIP_DECL_NODESELCOMP(NodeSelRandom::scip_comp)
 {
    int res = rand()%2-1;
     //return SCIPnodeGetNumber(node1) < SCIPnodeGetNumber(node2)?1:-1;
-    //SCIPdebugMsg(scip, (std::to_string(res) + "\n").c_str());
+    //SCIPdebugMsg(scipmain, (std::to_string(res) + "\n").c_str());
    return res;
 }
 

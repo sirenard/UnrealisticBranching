@@ -20,7 +20,7 @@ void Master::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
         for(int s=1; s <= nslaves; ++s){
             int i = c + s - 1;
             if(i == nlpcands)break;
-            //broadcastInstance(s, scip, lpcands[i]);
+            sendNode(scip, s, bestScore==-1?-1:bestScore+1, lpcands[i]);
         }
 
         // retrieve result
@@ -76,32 +76,49 @@ void Master::broadcastInstance(SCIP *scip) {
         SCIPgetConsNVars(scip, conss[j], &(consInfo.nVar), &success);
         MPI_Bcast(&consInfo, sizeof(ConsInfo), MPI_BYTE, 0, MPI_COMM_WORLD);
 
-        SCIPgetConsVars(scip, conss[j], conssVars, n, &success); // get the conssVars of the constraint
+        SCIPgetConsVars(scip, conss[j], consVars, n, &success); // get the conssVars of the constraint
         SCIPgetConsVals(scip, conss[j], vals, n, &success); // get the coefs of the constraint
         for(int i = 0; i < consInfo.nVar; ++i){
-            consVarsIndex[i] =  SCIPvarGetProbindex(conssVars[i]);
+            consVarsIndex[i] =  SCIPvarGetProbindex(consVars[i]);
         }
 
         MPI_Bcast(consVarsIndex, consInfo.nVar, MPI_INT, 0, MPI_COMM_WORLD);
         MPI_Bcast(vals, consInfo.nVar, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-
     }
+
     SCIPfreeBlockMemoryArray(scip, &vals, n);
     SCIPfreeBlockMemoryArray(scip, &consVars, n);
     SCIPfreeBlockMemoryArray(scip, &consVarsIndex, n);
 
     MPI_Barrier(MPI_COMM_WORLD);
-    /*SCIP_Real objLimit;
-    // get values of the best sol
-    SCIP_Sol* bestSol = SCIPgetBestSol(scip);
-    if(bestSol == NULL) {
-        objLimit = SCIPgetObjlimit(scip);
-    } else{
-        objLimit = SCIPsolGetOrigObj(bestSol);
-    }
-    MPI_Send(&objLimit, 1, MPI_DOUBLE, slaveNumber, 1, MPI_COMM_WORLD);
+}
 
-    int varToBranchIndex = SCIPvarGetProbindex(varToBranch);
-    MPI_Send(&varToBranchIndex, 1, MPI_INT, slaveNumber, 1, MPI_COMM_WORLD);*/
+void Master::sendNode(SCIP *scip, int slaveId, int nodeLimit, SCIP_VAR *varbrch) {
+    double leafTimeLimit;
+    SCIPgetRealParam(scip, "branching/unrealistic/leaftimelimit", &leafTimeLimit);
+    MPI_Send(&leafTimeLimit, 1, MPI_DOUBLE, slaveId, 1, MPI_COMM_WORLD);
+    MPI_Send(&nodeLimit, 1, MPI_INT, slaveId, 1, MPI_COMM_WORLD);
+
+    int n = SCIPgetNVars(scip);
+    SCIP_VAR **vars = SCIPgetVars(scip);
+    SCIP_Real *vals;
+    SCIPallocBlockMemoryArray(scip, &vals, n);
+
+    // send lower bounds
+    for(int i=0; i<n; ++i){
+        vals[i] = SCIPvarGetLbLocal(vars[i]);
+    }
+    MPI_Send(vals, n, MPI_DOUBLE, slaveId, 1, MPI_COMM_WORLD);
+
+    // send upper bounds
+    for(int i=0; i<n; ++i){
+        vals[i] = SCIPvarGetUbLocal(vars[i]);
+    }
+    MPI_Send(vals, n, MPI_DOUBLE, slaveId, 1, MPI_COMM_WORLD);
+
+    int id = SCIPvarGetProbindex(varbrch);
+    MPI_Send(&id, 1, MPI_INT, slaveId, 1, MPI_COMM_WORLD);
+
+
+    SCIPfreeBlockMemoryArray(scip, &vals, n);
 }
