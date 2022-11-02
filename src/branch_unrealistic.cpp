@@ -65,7 +65,8 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
 
     Node* node = Node::getInstance();
-    if(depth<maxdepth-1 || node->getRank()) { // No parallelization possible if we do not treat a leaf or if we are a slave
+    //if(depth<maxdepth-1 || node->getRank()) { // No parallelization possible if we do not treat a leaf or if we are a slave
+    if(true){
         // computing realNnodes for each variable
         for (int i = 0; i < nlpcands; ++i) {
             int score;
@@ -238,4 +239,16 @@ const SCIP_Retcode Branch_unrealistic::setBestSol(SCIP *scip, SCIP *scip_copy) c
 
 double *Branch_unrealistic::getLeafTimeLimitPtr() {
     return &leafTimeLimit;
+}
+
+SCIP_DECL_BRANCHINIT(Branch_unrealistic::scip_init){
+    Node *node = Node::getInstance();
+    if(node->isMaster()){
+        std::cout << "Init" << std::endl;
+        Master *master = dynamic_cast<Master *>(node);
+        master->broadcastInstance(scip);
+        std::cout << "Done" << std::endl;
+
+    }
+    return SCIP_OKAY;
 }

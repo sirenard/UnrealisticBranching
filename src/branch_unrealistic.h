@@ -24,6 +24,9 @@ private:
 
     SCIP_DECL_BRANCHEXECLP(scip_execlp) override;
 
+    SCIP_DECL_BRANCHINIT(scip_init) override;
+
+
     /**
      * Compute the realNnodes i.e. the minimum number of nodes needed to solve the 2 children problem if the branching
      * is done on a given variable
