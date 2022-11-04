@@ -7,9 +7,7 @@
 #include "Utils.h"
 #include "FeaturesCalculator.h"
 #include "RegressionModel.h"
-#include "mpi/Node.h"
-#include "mpi/Master.h"
-#include "mpi/Slave.h"
+#include "mpi/Worker.h"
 
 using namespace scip;
 using namespace std;
@@ -47,17 +45,19 @@ int main(
    )
 {
     int rank, world_size;
-    Node* node;
+    Worker* node;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
-    if(rank == 0){ // master node
-        if(world_size > 1)node = new Master(world_size-1);
-        else node = new Slave(1);
+    node = new Worker(world_size>1?rank:1); // if only 1 CPU, the unique node is not seen as a master
+    Worker::setInstance(node);
 
-        Node::setInstance(node);
+    if(rank == 0){ // master node
+        if(world_size > 1)
+            node->setWorkersRange(1, world_size);
+
         SCIP_RETCODE retcode;
         srand (time(NULL));
 
@@ -68,9 +68,7 @@ int main(
             return -1;
         }
     } else{
-        node = new Slave(rank);
-        Node::setInstance(node);
-        node->run();
+        node->work();
     }
 
     delete node;

@@ -8,8 +8,7 @@
 #include <sstream>
 #include "branch_unrealistic.h"
 #include "Utils.h"
-#include "mpi/Node.h"
-#include "mpi/Master.h"
+#include "mpi/Worker.h"
 
 #define 	BRANCHRULE_NAME   "unrealistic"
 #define 	BRANCHRULE_DESC   "unrealistic branching"
@@ -60,8 +59,9 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
         return SCIP_OKAY;
     }
 
-    Node* node = Node::getInstance();
-    if(depth<maxdepth-1 || !node->isMaster()) { // No parallelization possible if we do not treat a leaf or if we are a slave
+    Worker* node = Worker::getInstance();
+    if(false){
+    //if(depth<maxdepth-1 || !node->isMaster()) { // No parallelization possible if we do not treat a leaf or if we are a slave
         // computing realNnodes for each variable
         for (int i = 0; i < nlpcands; ++i) {
             int score;
@@ -97,12 +97,12 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
         }
     } else{ // the master must balance the computation of the score
-        Master* master = dynamic_cast<Master *>(Master::getInstance());
-        master->computeScores(scip, lpcands, nlpcands, bestcands, bestScore);
+        Worker* worker = Worker::getInstance();
+        worker->computeScores(scip, lpcands, nlpcands, bestcands, bestScore, depth + 1, maxdepth);
     }
 
-    int bestcand = bestcands[rand() % bestcands.size()];
-    //int bestcand = 0;
+    //int bestcand = bestcands[rand() % bestcands.size()];
+    int bestcand = bestcands.at(0);
     if (!depth) {
         SCIPdebugMsg(scip, ("Var to branch: " + std::to_string(bestcand + 1) + "; " +
                             std::string(SCIPvarGetName(lpcands[bestcand])) + "; Score: " +
@@ -131,7 +131,7 @@ Branch_unrealistic::computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalB
     int nodeLimit;
 
     if((dataWriter && depth==0) || bestScore<0 || bestScore == INT_MAX){
-        nodeLimit = -1; // if realNnodes data are not used, no need to run more than the best realNnodes
+        nodeLimit = -1; // if realNnodes data are not used, no need to work more than the best realNnodes
     } else{
         nodeLimit = bestScore + 1;
     }
@@ -238,11 +238,10 @@ double *Branch_unrealistic::getLeafTimeLimitPtr() {
 
 SCIP_DECL_BRANCHINIT(Branch_unrealistic::scip_init){
     SCIP_CALL( scip::ObjBranchrule::scip_init(scip, branchrule) );
-    Node *node = Node::getInstance();
-    if(node->isMaster()){
-        Master *master = dynamic_cast<Master *>(node);
-        master->broadcastInstance(scip);
-
+    Worker *worker = Worker::getInstance();
+    worker->setScipInstance(scip);
+    if(worker->isMaster()){
+        worker->broadcastInstance(scip);
     }
     return SCIP_OKAY;
 }
