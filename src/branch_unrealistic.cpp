@@ -49,7 +49,6 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
         firstBranch=nullptr;
 
         *result = SCIP_BRANCHED;
-
         if(depth>=maxdepth){
             SCIP_CALL( SCIPsetRealParam(scip, "limits/time", leafTimeLimit));
             SCIP_CALL( Utils::configure_scip_instance(scip, false) );
@@ -59,47 +58,9 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
         return SCIP_OKAY;
     }
 
-    Worker* node = Worker::getInstance();
-    if(false){
-    //if(depth<maxdepth-1 || !node->isMaster()) { // No parallelization possible if we do not treat a leaf or if we are a slave
-        // computing realNnodes for each variable
-        for (int i = 0; i < nlpcands; ++i) {
-            int score;
-            SCIP_BoundType branchSide;
-            SCIP_Real childPrimalBounds[2];
-            assert(lpcands[i] != nullptr);
 
-            SCIP_CALL(computeScore(
-                    scip,
-                    score,
-                    childPrimalBounds,
-                    bestScore,
-                    lpcandsfrac[i],
-                    lpcands[i],
-                    branchSide));
-
-            varScores[i] = score;
-
-            if (bestScore == -1 || score < bestScore) {
-                bestScore = score;
-                bestcands.clear();
-
-            }
-
-            if (score == bestScore) {
-                bestcands.push_back(i);
-            }
-
-            if (!depth)
-                SCIPdebugMsg(scip, (std::string(depth, '\t') + std::to_string(i + 1) + "/" + std::to_string(nlpcands) +
-                                    " (score: " + std::to_string(score) + ") (var: " + SCIPvarGetName(lpcands[i]) +
-                                    ")\n").c_str());
-
-        }
-    } else{ // the master must balance the computation of the score
-        Worker* worker = Worker::getInstance();
-        worker->computeScores(scip, lpcands, nlpcands, bestcands, bestScore, depth + 1, maxdepth);
-    }
+    Worker* worker = Worker::getInstance();
+    worker->computeScores(scip, lpcands, nlpcands, bestcands, bestScore, depth + 1, maxdepth, leafTimeLimit);
 
     //int bestcand = bestcands[rand() % bestcands.size()];
     int bestcand = bestcands.at(0);
@@ -123,88 +84,6 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 }
 
 
-
-SCIP_RETCODE
-Branch_unrealistic::computeScore(SCIP *scip, int &score, SCIP_Real *childPrimalBounds, int bestScore,
-                                 SCIP_Real fracValue, SCIP_VAR *varbrch, SCIP_BoundType &branchSide) const {
-
-    int nodeLimit;
-
-    if((dataWriter && depth==0) || bestScore<0 || bestScore == INT_MAX){
-        nodeLimit = -1; // if realNnodes data are not used, no need to work more than the best realNnodes
-    } else{
-        nodeLimit = bestScore + 1;
-    }
-
-    SCIP *scip_copy;
-    SCIP_Bool valid;
-    SCIP_CALL(SCIPcreate(&scip_copy));
-    SCIP_HashMap *varmap;
-    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip_copy), SCIPgetNVars(scip)) );
-    SCIP_CALL( SCIPcopy(scip, scip_copy, varmap, nullptr, "ub_subsolver", FALSE, FALSE, FALSE, FALSE, &valid) );
-    assert(valid == TRUE);
-
-    SCIPcopyParamSettings(scip, scip_copy);
-
-    auto *objbranchrule = new Branch_unrealistic(scip_copy, depth + 1, maxdepth, leafTimeLimit);
-    SCIP_CALL(SCIPincludeObjBranchrule(scip_copy, objbranchrule, TRUE));
-    Utils::configure_scip_instance(scip_copy, true);
-    SCIPsetLongintParam(scip_copy, "limits/nodes", nodeLimit);
-    SCIP_CALL( SCIPsetIntParam(scip_copy, "display/verblevel",0));
-    // don't use heuristics on recursion levels
-    SCIP_CALL( SCIPsetHeuristics(scip_copy, SCIP_PARAMSETTING_OFF, TRUE) );
-    SCIP_CALL( SCIPsetRealParam(scip_copy,"limits/time",600) );
-
-    // TODO: Is usefull?
-    SCIP_CALL( SCIPmergeVariableStatistics(scip, scip_copy, SCIPgetVars(scip), SCIPgetVars(scip_copy), SCIPgetNVars(scip)) );
-
-
-    SCIP_VAR* varbrch_copy = (SCIP_VAR*) SCIPhashmapGetImage(varmap, varbrch);
-    assert(varbrch != nullptr);
-
-    objbranchrule->setFirstBranch(varbrch_copy);
-
-    setBestSol(scip, scip_copy);
-
-    double timeLim;
-    SCIP_Longint nodelimit;
-
-    SCIPgetRealParam(scip_copy, "limits/time", &timeLim);
-    SCIPgetLongintParam(scip_copy, "limits/nodes", &nodelimit);
-
-    score = INT_MAX;
-    try {
-        /**
-         * Solving the copy crash sometimes randomly. When it happens,
-         * we consider that the score is maximum (INT_MAX) and not
-         * considered.
-         * TODO: do it better
-         */
-        SCIPsolve(scip_copy);
-        SCIP_STATUS status = SCIPgetStatus(scip_copy);
-        switch (status){
-            case SCIP_STATUS_NODELIMIT:
-            case SCIP_STATUS_OPTIMAL:
-            case SCIP_STATUS_INFEASIBLE:
-                score = SCIPgetNNodes(scip_copy);
-                break;
-            case SCIP_STATUS_TIMELIMIT:
-                SCIPdebugMsg(scip, ("Time limit: " + std::to_string(SCIPgetTotalTime(scip_copy)) + "\n").c_str());
-                break;
-        }
-    } catch (std::exception &e){
-        SCIPerrorMessage("Error SCIPsolve \n");
-        return SCIP_OKAY;
-    }
-
-    // free memory allocated
-    SCIPhashmapFree(&varmap);
-    SCIPreleaseVar(scip_copy, &varbrch_copy);
-    SCIPfree(&scip_copy);
-
-    return SCIP_OKAY;
-}
-
 DatasetWriter* Branch_unrealistic::dataWriter = nullptr;
 void Branch_unrealistic::setDataWriter(DatasetWriter *dataWriter) {
     Branch_unrealistic::dataWriter = dataWriter;
@@ -216,20 +95,6 @@ int *Branch_unrealistic::getMaxDepthPtr() {
 
 void Branch_unrealistic::setFirstBranch(SCIP_Var *firstBranch) {
     Branch_unrealistic::firstBranch = firstBranch;
-}
-
-const SCIP_Retcode Branch_unrealistic::setBestSol(SCIP *scip, SCIP *scip_copy) const{
-    SCIP_Real objLimit;
-    // get values of the best sol
-    SCIP_Sol* bestSol = SCIPgetBestSol(scip);
-    if(bestSol == NULL) {
-        objLimit = SCIPgetObjlimit(scip);
-    } else{
-        objLimit = SCIPsolGetOrigObj(bestSol);
-    }
-    SCIPsetObjlimit(scip_copy, objLimit);
-
-    return SCIP_OKAY;
 }
 
 double *Branch_unrealistic::getLeafTimeLimitPtr() {

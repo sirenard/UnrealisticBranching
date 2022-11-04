@@ -58,11 +58,12 @@ public:
 
     void
     computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::vector<int> &bestcands, int &bestScore, int depth,
-                  int maxdepth);
+                  int maxdepth, double leafTimeLimit);
 
     void broadcastInstance(SCIP *scip);
 
-    SCIP * sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_VAR *varbrch, int depth, int maxdepth);
+    SCIP *
+    sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_VAR *varbrch, int depth, int maxdepth, double objlimit, double leafTimeLimit);
 
     void sendWorkersRange(unsigned int id, unsigned int start, unsigned int end);
 
@@ -70,7 +71,7 @@ public:
 
     SCIP *
     createScipInstance(double leafTimeLimit, int depth, int maxdepth, int nodeLimit, int n, double *lb, double *ub,
-                       int firstBrchId);
+                       int firstBrchId, double objlimit);
 
     int getScore(SCIP *scip);
 

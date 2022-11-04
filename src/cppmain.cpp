@@ -56,7 +56,7 @@ int main(
 
     if(rank == 0){ // master node
         if(world_size > 1)
-            node->setWorkersRange(1, world_size);
+            node->setWorkersRange(1, world_size-1);
 
         SCIP_RETCODE retcode;
         srand (time(NULL));
