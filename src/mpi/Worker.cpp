@@ -66,8 +66,12 @@ void Worker::retrieveInstance() {
         SCIP_Var* var;
 
         MPI_Bcast(&varInfo, sizeof(VarInfo), MPI_BYTE, 0, MPI_COMM_WORLD);
+        char* name =  new char(varInfo.nameLength + 1);
+        MPI_Bcast(name, varInfo.nameLength, MPI_CHAR, 0, MPI_COMM_WORLD);
 
-        SCIPcreateVar(scipmain, &var, NULL, varInfo.lb, varInfo.ub, varInfo.obj, varInfo.type, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL);
+        name[varInfo.nameLength] = '\0';
+
+        SCIPcreateVar(scipmain, &var, name, varInfo.lb, varInfo.ub, varInfo.obj, varInfo.type, FALSE, FALSE, NULL, NULL, NULL, NULL, NULL);
         SCIPaddVar(scipmain, var);
         SCIPreleaseVar(scipmain, &var);
     }
@@ -120,18 +124,6 @@ void Worker::retrieveInstance() {
     SCIPfreeBlockMemoryArray(scipmain, &objCoef, n);
 
     MPI_Barrier(MPI_COMM_WORLD);
-    /*double objLimit;
-    MPI_Recv(&objLimit, 1, MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-    SCIPsetObjlimit(scipmain, objLimit);
-
-    int varToBranchIndex;
-    MPI_Recv(&varToBranchIndex, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-    SCIP_VAR* varTobranch = vars[varToBranchIndex];
-
-    // TODO: Slave stay in UNREALISTIC branch rule
-    Branch_unrealistic *rule = reinterpret_cast<Branch_unrealistic *>(SCIPfindBranchrule(scipmain, "unrealistic"));
-    rule->setFirstBranch(varTobranch);*/
-
 }
 
 void Worker::createScipInstance() {
@@ -179,7 +171,7 @@ SCIP* Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth, 
     SCIP_Bool valid;
     SCIPcreate(&scip_copy);
 
-    SCIPcopy(scipmain, scip_copy, nullptr, nullptr, "ub_subsolver", FALSE, FALSE, FALSE, FALSE, &valid);
+    SCIPcopy(scipmain, scip_copy, nullptr, nullptr, ("ub_subsolver" + std::to_string(rank)).c_str(), TRUE, FALSE, FALSE, FALSE, &valid);
     assert(valid == TRUE);
 
     SCIPcopyParamSettings(scipmain, scip_copy);
@@ -205,6 +197,10 @@ SCIP* Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth, 
     }
 
     objbranchrule->setFirstBranch(vars[firstBrchId]);
+
+    //if(!(depth-1))std::cout << "Branch on " << SCIPvarGetName(vars[firstBrchId]) << ", objlimit: " << objlimit << std::endl;
+
+    //if(!(depth-1))std::cout << SCIPgetNConss(scip_copy)<<" constraints" << std::endl;
 
     SCIPsetObjlimit(scip_copy, objlimit);
 
@@ -250,16 +246,19 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
                 if(bestScore < nodelimit && bestScore != -1){
                     nodelimit = bestScore + 1;
                 }
+                nodelimit=-1;
                 sendNode(scip, workerId, nodelimit, lpcands[i], depth, maxdepth, objlimit, leafTimeLimit);
             }
 
             // retrieve result
             int score;
-            for (int s = 1; s <= nWorkers; ++s) {
-                int i = c + s - 1;
+            for (int s=0; s < nWorkers; ++s) {
+                int i = c + s;
                 if (i == nlpcands)break;
-                MPI_Recv(&score, 1, MPI_INT, s, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-                if(!(depth-1))std::cout << "Score: " << score << std::endl;
+                unsigned workerId = startWorkersRange + s;
+
+                MPI_Recv(&score, 1, MPI_INT, workerId, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+                if(!(depth-1))std::cout << "Score of " << SCIPvarGetName(lpcands[i]) <<": " << score << std::endl;
                 if (score < bestScore || bestScore == -1) {
                     bestcands.clear();
                     bestcands.push_back(i);
@@ -272,7 +271,7 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
     } else{ // no worker available, it's time to do the work by yourself
         for(int i=0; i < nlpcands; ++i){
             int nodelimit = -1;
-            if(bestScore < nodelimit && bestScore != -1){
+            if(bestScore < INT_MAX && bestScore != -1){
                 nodelimit = bestScore + 1;
             }
             SCIP* scip_copy = sendNode(scip, rank, nodelimit, lpcands[i], depth, maxdepth,
@@ -281,7 +280,7 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
             int score = getScore(scip_copy);
             scipmain = scip;
 
-            if(!(depth-1))std::cout << "Score: " << score << std::endl;
+            if(!(depth-1))std::cout << "Score of " << SCIPvarGetName(lpcands[i]) <<": " << score << std::endl;
             /*SCIPdebugMsg(scipmain, (std::string(depth, '\t') + std::to_string(i + 1) + "/" + std::to_string(nlpcands) +
                                 " (score: " + std::to_string(score) + ") (var: " + SCIPvarGetName(lpcands[i]) +
                                 ")\n").c_str());*/
@@ -309,7 +308,11 @@ void Worker::broadcastInstance(SCIP *scip) {
         varInfo.ub = SCIPvarGetUbGlobal(conssVars[i]);
         varInfo.obj = SCIPvarGetObj(conssVars[i]);
 
+        const char* name = SCIPvarGetName(conssVars[i]);
+        varInfo.nameLength = strlen(name);
+
         MPI_Bcast(&varInfo, sizeof(VarInfo), MPI_BYTE, 0, MPI_COMM_WORLD);
+        MPI_Bcast((void*)name, varInfo.nameLength, MPI_CHAR, 0, MPI_COMM_WORLD);
     }
 
     int m = SCIPgetNConss(scip);

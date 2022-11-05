@@ -42,6 +42,11 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
     int* varScores; // store every variable's realNnodes
     SCIPallocBlockMemoryArray(scip, &varScores, nlpcands);
 
+    SCIP_Cons** conss = SCIPgetOrigConss(scip);
+    for(int i=0; i<SCIPgetNOrigConss(scip);++i ){
+        //if()
+    }
+
     // an instruction already exists for the first branching (given by the parent)
     if(firstBranch!=nullptr){
         //SCIPdebugMsg(scipmain, ("nnodes: " + std::to_string(SCIPgetNSols(scipmain) )+ "\n").c_str());
@@ -104,8 +109,8 @@ double *Branch_unrealistic::getLeafTimeLimitPtr() {
 SCIP_DECL_BRANCHINIT(Branch_unrealistic::scip_init){
     SCIP_CALL( scip::ObjBranchrule::scip_init(scip, branchrule) );
     Worker *worker = Worker::getInstance();
-    worker->setScipInstance(scip);
     if(worker->isMaster()){
+        worker->setScipInstance(scip);
         worker->broadcastInstance(scip);
     }
     return SCIP_OKAY;

@@ -106,6 +106,12 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
 
     SCIP_CALL( SCIPsetBoolParam(scip,"benders/copybenders",FALSE) );
     SCIP_CALL( SCIPsetBoolParam(scip,"benders/cutlpsol",FALSE) );
+
+   /* SCIP_CALL( SCIPsetBoolParam(scip,"lp/cleanuprows",FALSE) );
+    SCIP_CALL( SCIPsetBoolParam(scip,"lp/cleanuprowsroot",FALSE) );
+
+    SCIP_CALL( SCIPsetIntParam(scip,"constraints/agelimit",-1) );*/
+
     return SCIP_OKAY;
 }
 

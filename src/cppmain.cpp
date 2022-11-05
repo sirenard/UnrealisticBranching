@@ -51,7 +51,7 @@ int main(
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
-    node = new Worker(world_size>1?rank:1); // if only 1 CPU, the unique node is not seen as a master
+    node = new Worker(rank); // if only 1 CPU, the unique node is not seen as a master
     Worker::setInstance(node);
 
     if(rank == 0){ // master node

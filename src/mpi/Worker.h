@@ -16,6 +16,7 @@ class Worker {
         double lb;
         double ub;
         double obj;
+        int nameLength;
     };
 
     struct ConsInfo{
@@ -76,6 +77,7 @@ public:
     int getScore(SCIP *scip);
 
     void setScipInstance(SCIP *scip);
+
 };
 
 
