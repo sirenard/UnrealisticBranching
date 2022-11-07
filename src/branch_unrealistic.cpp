@@ -111,7 +111,6 @@ SCIP_DECL_BRANCHINIT(Branch_unrealistic::scip_init){
     Worker *worker = Worker::getInstance();
     if(worker->isMaster()){
         worker->setScipInstance(scip);
-        worker->broadcastInstance(scip);
     }
     return SCIP_OKAY;
 }

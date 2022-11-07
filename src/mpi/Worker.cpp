@@ -33,19 +33,16 @@ bool Worker::isMaster() {
 void Worker::work() {
     createScipInstance();
     retrieveInstance();
-    std::cout << "Child init done." << std::endl;
 
-    SCIP* s=scipmain;
     while (true) {
         getWorkersRange();
         SCIP *scip_copy = retrieveNode();
         SCIPsolve(scip_copy);
         int score = getScore(scip_copy);
-        //std::cout << "Score: " << score << " - " << SCIPgetSolOrigObj(scip_copy, SCIPgetBestSol(scip_copy)) << std::endl;
-        scipmain=s; // TODO: Why needed? scipmain is changed but how?
         returnScore(score);
         SCIPfree(&scip_copy);
     }
+    SCIPfree(&scipmain);
 }
 
 void Worker::returnScore(int score) {
@@ -53,77 +50,13 @@ void Worker::returnScore(int score) {
 }
 
 void Worker::retrieveInstance() {
-    int n; // number of variables in the problem
-    int m; // number of constraints in the problem
-    MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    int len;
+    MPI_Bcast(&len, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    char* name =  new char[len];
+    MPI_Bcast(name, len, MPI_CHAR, 0, MPI_COMM_WORLD);
 
-    SCIP_Real *objCoef;
-    SCIPallocBlockMemoryArray(scipmain, &objCoef, n);
-
-    // Receive variables data
-    VarInfo varInfo;
-    for(int i = 0; i < n; ++i){
-        SCIP_Var* var;
-
-        MPI_Bcast(&varInfo, sizeof(VarInfo), MPI_BYTE, 0, MPI_COMM_WORLD);
-        char* name =  new char(varInfo.nameLength + 1);
-        MPI_Bcast(name, varInfo.nameLength, MPI_CHAR, 0, MPI_COMM_WORLD);
-
-        name[varInfo.nameLength] = '\0';
-
-        SCIPcreateVar(scipmain, &var, name, varInfo.lb, varInfo.ub, varInfo.obj, varInfo.type, FALSE, FALSE, NULL, NULL, NULL, NULL, NULL);
-        SCIPaddVar(scipmain, var);
-        SCIPreleaseVar(scipmain, &var);
-    }
-
-    SCIP_VAR ** vars = SCIPgetVars(scipmain);
-    // Receive constraints data
-    MPI_Bcast(&m, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-    SCIP_Bool success;
-    SCIP_Real *vals;
-    SCIP_VAR **consVars;
-    int *consVarsIndex;
-    SCIPallocBlockMemoryArray(scipmain, &vals, n);
-    SCIPallocBlockMemoryArray(scipmain, &consVars, n);
-    SCIPallocBlockMemoryArray(scipmain, &consVarsIndex, n);
-
-
-
-    ConsInfo consInfo;
-    for(int j=0; j<m; ++j){
-        MPI_Bcast(&consInfo, sizeof(ConsInfo), MPI_BYTE, 0, MPI_COMM_WORLD);
-        MPI_Bcast(consVarsIndex, consInfo.nVar, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(vals, consInfo.nVar, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-        for(int i = 0; i < consInfo.nVar; ++i){
-            int varNumber = consVarsIndex[i];
-            consVars[i] = vars[varNumber];
-        }
-
-        SCIP_CONS *cons;
-        SCIPcreateConsBasicLinear(
-                scipmain,
-                &cons,
-                (std::to_string(j)+"cons").c_str(),
-                consInfo.nVar,
-                consVars,
-                vals,
-                consInfo.lhs,
-                consInfo.rhs
-        );
-
-        SCIPaddCons(scipmain, cons);
-        SCIPreleaseCons(scipmain, &cons);
-    }
-
-
-    SCIPfreeBlockMemoryArray(scipmain, &vals, n);
-    SCIPfreeBlockMemoryArray(scipmain, &consVars, n);
-    SCIPfreeBlockMemoryArray(scipmain, &consVarsIndex, n);
-    SCIPfreeBlockMemoryArray(scipmain, &objCoef, n);
-
-    MPI_Barrier(MPI_COMM_WORLD);
+    SCIPreadProb(scipmain, name, NULL);
+    delete[] name;
 }
 
 void Worker::createScipInstance() {
@@ -171,7 +104,7 @@ SCIP* Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth, 
     SCIP_Bool valid;
     SCIPcreate(&scip_copy);
 
-    SCIPcopy(scipmain, scip_copy, nullptr, nullptr, ("ub_subsolver" + std::to_string(rank)).c_str(), TRUE, FALSE, FALSE, FALSE, &valid);
+    SCIPcopy(scipmain, scip_copy, nullptr, nullptr, ("ub_subsolver" + std::to_string(rank)).c_str(), FALSE, FALSE, FALSE, FALSE, &valid);
     assert(valid == TRUE);
 
     SCIPcopyParamSettings(scipmain, scip_copy);
@@ -181,13 +114,12 @@ SCIP* Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth, 
     SCIPincludeObjBranchrule(scip_copy, objbranchrule, TRUE);
     Utils::configure_scip_instance(scip_copy, true);
     SCIPsetLongintParam(scip_copy, "limits/nodes", nodeLimit);
-    SCIPsetIntParam(scip_copy, "display/verblevel",0);
+    SCIPsetIntParam(scip_copy,"display/freq",1);
+
+    SCIPsetIntParam(scip_copy, "display/verblevel", 0);
     // don't use heuristics on recursion levels
     SCIPsetHeuristics(scip_copy, SCIP_PARAMSETTING_OFF, TRUE);
     SCIPsetRealParam(scip_copy,"limits/time",600);
-
-    // TODO: Is this usefull?
-    //SCIPmergeVariableStatistics(scipmain, scip_copy, SCIPgetVars(scipmain), SCIPgetVars(scip_copy), SCIPgetNVars(scipmain));
 
     SCIP_VAR **vars = SCIPgetVars(scip_copy);
     // set lower bounds
@@ -197,11 +129,6 @@ SCIP* Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth, 
     }
 
     objbranchrule->setFirstBranch(vars[firstBrchId]);
-
-    //if(!(depth-1))std::cout << "Branch on " << SCIPvarGetName(vars[firstBrchId]) << ", objlimit: " << objlimit << std::endl;
-
-    //if(!(depth-1))std::cout << SCIPgetNConss(scip_copy)<<" constraints" << std::endl;
-
     SCIPsetObjlimit(scip_copy, objlimit);
 
     return scip_copy;
@@ -243,10 +170,9 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
 
                 sendWorkersRange(workerId, start, end);
                 int nodelimit = -1;
-                if(bestScore < nodelimit && bestScore != -1){
+                if(bestScore < INT_MAX && bestScore != -1){
                     nodelimit = bestScore + 1;
                 }
-                nodelimit=-1;
                 sendNode(scip, workerId, nodelimit, lpcands[i], depth, maxdepth, objlimit, leafTimeLimit);
             }
 
@@ -297,61 +223,13 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
     }
 }
 
-void Worker::broadcastInstance(SCIP *scip) {
-    SCIP_VAR** conssVars = SCIPgetVars(scip);
-    int n = SCIPgetNVars(scip);
-    MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    VarInfo varInfo;
-    for(int i=0; i<n; ++i){
-        varInfo.type = SCIPvarGetType(conssVars[i]);
-        varInfo.lb = SCIPvarGetLbGlobal(conssVars[i]);
-        varInfo.ub = SCIPvarGetUbGlobal(conssVars[i]);
-        varInfo.obj = SCIPvarGetObj(conssVars[i]);
+void Worker::broadcastInstance() {
+    // broadcast the instance name
+    const char* name = SCIPgetProbName(scipmain);
+    int len = strlen(name);
 
-        const char* name = SCIPvarGetName(conssVars[i]);
-        varInfo.nameLength = strlen(name);
-
-        MPI_Bcast(&varInfo, sizeof(VarInfo), MPI_BYTE, 0, MPI_COMM_WORLD);
-        MPI_Bcast((void*)name, varInfo.nameLength, MPI_CHAR, 0, MPI_COMM_WORLD);
-    }
-
-    int m = SCIPgetNConss(scip);
-    MPI_Bcast(&m, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    SCIP_CONS **conss = SCIPgetConss(scip);
-
-    SCIP_Bool success;
-    SCIP_Real *vals;
-    int *consVarsIndex;
-    SCIP_VAR **consVars;
-    SCIPallocBlockMemoryArray(scip, &vals, n);
-    SCIPallocBlockMemoryArray(scip, &consVars, n);
-    SCIPallocBlockMemoryArray(scip, &consVarsIndex, n);
-
-    // for each constraint
-    ConsInfo consInfo;
-    for(int j=0; j<m; ++j){
-        consInfo.lhs = SCIPconsGetLhs(scip, conss[j], &success);
-        consInfo.rhs = SCIPconsGetRhs(scip, conss[j], &success);
-
-        // get the number of vars in the constraint
-        SCIPgetConsNVars(scip, conss[j], &(consInfo.nVar), &success);
-        MPI_Bcast(&consInfo, sizeof(ConsInfo), MPI_BYTE, 0, MPI_COMM_WORLD);
-
-        SCIPgetConsVars(scip, conss[j], consVars, n, &success); // get the conssVars of the constraint
-        SCIPgetConsVals(scip, conss[j], vals, n, &success); // get the coefs of the constraint
-        for(int i = 0; i < consInfo.nVar; ++i){
-            consVarsIndex[i] =  SCIPvarGetProbindex(consVars[i]);
-        }
-
-        MPI_Bcast(consVarsIndex, consInfo.nVar, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(vals, consInfo.nVar, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    }
-
-    SCIPfreeBlockMemoryArray(scip, &vals, n);
-    SCIPfreeBlockMemoryArray(scip, &consVars, n);
-    SCIPfreeBlockMemoryArray(scip, &consVarsIndex, n);
-
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Bcast(&len, 1, MPI_INT, rank, MPI_COMM_WORLD);
+    MPI_Bcast((void*)name, len, MPI_CHAR, rank, MPI_COMM_WORLD);
 }
 
 SCIP * Worker::sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_VAR *varbrch, int depth, int maxdepth,
@@ -441,5 +319,6 @@ int Worker::getScore(SCIP *scip) {
 }
 
 void Worker::setScipInstance(SCIP *scip) {
-    scipmain = scip;
+    scipmain=scip;
+    broadcastInstance();
 }

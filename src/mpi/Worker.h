@@ -61,7 +61,7 @@ public:
     computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::vector<int> &bestcands, int &bestScore, int depth,
                   int maxdepth, double leafTimeLimit);
 
-    void broadcastInstance(SCIP *scip);
+    void broadcastInstance();
 
     SCIP *
     sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_VAR *varbrch, int depth, int maxdepth, double objlimit, double leafTimeLimit);
