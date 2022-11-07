@@ -109,7 +109,7 @@ double *Branch_unrealistic::getLeafTimeLimitPtr() {
 SCIP_DECL_BRANCHINIT(Branch_unrealistic::scip_init){
     SCIP_CALL( scip::ObjBranchrule::scip_init(scip, branchrule) );
     Worker *worker = Worker::getInstance();
-    if(worker->isMaster()){
+    if(worker->isMaster() && depth==0){
         worker->setScipInstance(scip);
     }
     return SCIP_OKAY;

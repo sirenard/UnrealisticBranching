@@ -163,10 +163,11 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
                 unsigned workerId = startWorkersRange + s;
 
                 unsigned start = -1, end = -1;
-                /*if (nWorkersForEach > 0) {
+                if (nWorkersForEach > 0) {
                     start = startWorkersRange + nlpcands + s * nWorkersForEach;
                     end = start + nWorkersForEach;
-                }*/
+                }
+
 
                 sendWorkersRange(workerId, start, end);
                 int nodelimit = -1;
@@ -204,7 +205,6 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
                                        objlimit, leafTimeLimit);
             SCIPsolve(scip_copy);
             int score = getScore(scip_copy);
-            scipmain = scip;
 
             if(!(depth-1))std::cout << "Score of " << SCIPvarGetName(lpcands[i]) <<": " << score << std::endl;
             /*SCIPdebugMsg(scipmain, (std::string(depth, '\t') + std::to_string(i + 1) + "/" + std::to_string(nlpcands) +
@@ -223,9 +223,8 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
     }
 }
 
-void Worker::broadcastInstance() {
+void Worker::broadcastInstance(const char *name) {
     // broadcast the instance name
-    const char* name = SCIPgetProbName(scipmain);
     int len = strlen(name);
 
     MPI_Bcast(&len, 1, MPI_INT, rank, MPI_COMM_WORLD);
@@ -319,6 +318,11 @@ int Worker::getScore(SCIP *scip) {
 }
 
 void Worker::setScipInstance(SCIP *scip) {
-    scipmain=scip;
-    broadcastInstance();
+    std::cout <<"hole" <<std::endl;
+    SCIP_Bool valid;
+    SCIPcreate(&scipmain);
+
+    SCIPcopy(scip, scipmain, nullptr, nullptr, NULL, FALSE, FALSE, FALSE, FALSE, &valid);
+
+    broadcastInstance(SCIPgetProbName(scip));
 }
