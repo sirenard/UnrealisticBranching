@@ -42,11 +42,6 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
     int* varScores; // store every variable's realNnodes
     SCIPallocBlockMemoryArray(scip, &varScores, nlpcands);
 
-    SCIP_Cons** conss = SCIPgetOrigConss(scip);
-    for(int i=0; i<SCIPgetNOrigConss(scip);++i ){
-        //if()
-    }
-
     // an instruction already exists for the first branching (given by the parent)
     if(firstBranch!=nullptr){
         //SCIPdebugMsg(scipmain, ("nnodes: " + std::to_string(SCIPgetNSols(scipmain) )+ "\n").c_str());
@@ -68,7 +63,10 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
     worker->computeScores(scip, lpcands, nlpcands, bestcands, bestScore, depth + 1, maxdepth, leafTimeLimit);
 
     //int bestcand = bestcands[rand() % bestcands.size()];
-    int bestcand = bestcands.at(0);
+    int bestcand = bestcands.at(0); // TODO: chose at random
+    for(auto k: bestcands){
+        if(k<bestcand) bestcand = k;
+    }
     if (!depth) {
         SCIPdebugMsg(scip, ("Var to branch: " + std::to_string(bestcand + 1) + "; " +
                             std::string(SCIPvarGetName(lpcands[bestcand])) + "; Score: " +

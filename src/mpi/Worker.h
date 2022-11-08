@@ -66,7 +66,7 @@ public:
     SCIP *
     sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_VAR *varbrch, int depth, int maxdepth, double objlimit, double leafTimeLimit);
 
-    void sendWorkersRange(unsigned int id, unsigned int start, unsigned int end);
+    void sendWorkersRange(unsigned int workerRank, unsigned int start, unsigned int end);
 
     void getWorkersRange();
 
@@ -78,6 +78,9 @@ public:
 
     void setScipInstance(SCIP *scip);
 
+    unsigned int
+    extractScore(SCIP_VAR *const *lpcands, std::vector<int> &bestcands, int depth, const int *workerMap,
+                 int &bestScore) const;
 };
 
 

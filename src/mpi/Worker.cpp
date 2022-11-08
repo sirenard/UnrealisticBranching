@@ -38,6 +38,7 @@ void Worker::work() {
         getWorkersRange();
         SCIP *scip_copy = retrieveNode();
         SCIPsolve(scip_copy);
+
         int score = getScore(scip_copy);
         returnScore(score);
         SCIPfree(&scip_copy);
@@ -139,7 +140,10 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
                            int maxdepth, double leafTimeLimit) {
     int nUnusedWorkers = nWorkers - nlpcands;
     int nWorkersForEach;
-    if(nUnusedWorkers > 0) nWorkersForEach = nUnusedWorkers / nlpcands; //each worker can have  n sub workers
+    if(nUnusedWorkers > 0){
+        nWorkersForEach = std::ceil((float)nUnusedWorkers / nlpcands); //each worker can have  n sub workers
+        if(nWorkersForEach == 1)nWorkersForEach = 2; // only one subworker is useless
+    }
     else nWorkersForEach = 0;
 
     SCIP_Real objlimit;
@@ -153,48 +157,53 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
 
 
     if(nWorkers) {
-        for (int c = 0; c < nlpcands; c += nWorkers) {
-            // launch the tasks
-            for (int s = 0; s < nWorkers; ++s) {
-                int i = c + s; // index of the cand
-                if (i == nlpcands)break;
+        //std::cout << "Work with " << nWorkers << " workers" << std::endl;
+        int nFreeWorkers = nWorkers - nlpcands;
+        int firstFreeWorker = startWorkersRange + nlpcands;
+        int *workerMap = new int[nlpcands];
+        int nActiveWorkers = 0;
+        unsigned nextWorkerId = startWorkersRange;
 
+        //std::cout << startWorkersRange << " to " << endWorkersRange << ", " << nlpcands << " cands" << std::endl;
+        for (int i = 0; i < nlpcands; ++i) {
+            unsigned workerId = nextWorkerId;
+            unsigned start = 0, end = 0;
+            int flag=0;
+            MPI_Iprobe( MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status );
+            if(flag || nextWorkerId == endWorkersRange){ // an old worker is available
+                workerId = extractScore(lpcands, bestcands, depth, workerMap, bestScore);
+                start = -1;
+                end = -1;
 
-                unsigned workerId = startWorkersRange + s;
-
-                unsigned start = -1, end = -1;
-                if (nWorkersForEach > 0) {
-                    start = startWorkersRange + nlpcands + s * nWorkersForEach;
-                    end = start + nWorkersForEach;
-                }
-
-
-                sendWorkersRange(workerId, start, end);
-                int nodelimit = -1;
-                if(bestScore < INT_MAX && bestScore != -1){
-                    nodelimit = bestScore + 1;
-                }
-                sendNode(scip, workerId, nodelimit, lpcands[i], depth, maxdepth, objlimit, leafTimeLimit);
+            } else{
+                nActiveWorkers++;
+                nextWorkerId++;
+                /*if (nFreeWorkers > 1) {
+                    start = firstFreeWorker;
+                    int nSelectedWorkers = std::min(nFreeWorkers, nWorkersForEach);
+                    end = start + nSelectedWorkers;
+                    nFreeWorkers -= nSelectedWorkers;
+                    firstFreeWorker += nSelectedWorkers;
+                    //std::cout << "Node " << workerId << " has " << nSelectedWorkers << " workers" << std::endl;
+                }*/
             }
 
-            // retrieve result
-            int score;
-            for (int s=0; s < nWorkers; ++s) {
-                int i = c + s;
-                if (i == nlpcands)break;
-                unsigned workerId = startWorkersRange + s;
+            //std::cout << workerId << " on " << i << std::endl;
+            workerMap[workerId - startWorkersRange] = i;
 
-                MPI_Recv(&score, 1, MPI_INT, workerId, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-                if(!(depth-1))std::cout << "Score of " << SCIPvarGetName(lpcands[i]) <<": " << score << std::endl;
-                if (score < bestScore || bestScore == -1) {
-                    bestcands.clear();
-                    bestcands.push_back(i);
-                    bestScore = score;
-                } else if (score == bestScore) {
-                    bestcands.push_back(i);
-                }
+            sendWorkersRange(workerId, start, end);
+            int nodelimit = -1;
+            if(bestScore < INT_MAX && bestScore != -1){
+                nodelimit = bestScore + 1;
             }
+            sendNode(scip, workerId, nodelimit, lpcands[i], depth, maxdepth, objlimit, leafTimeLimit);
         }
+
+        for(int j=0; j<nActiveWorkers; ++j){
+            extractScore(lpcands, bestcands, depth, workerMap, bestScore);
+        }
+
+        delete[] workerMap;
     } else{ // no worker available, it's time to do the work by yourself
         for(int i=0; i < nlpcands; ++i){
             int nodelimit = -1;
@@ -207,9 +216,6 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
             int score = getScore(scip_copy);
 
             if(!(depth-1))std::cout << "Score of " << SCIPvarGetName(lpcands[i]) <<": " << score << std::endl;
-            /*SCIPdebugMsg(scipmain, (std::string(depth, '\t') + std::to_string(i + 1) + "/" + std::to_string(nlpcands) +
-                                " (score: " + std::to_string(score) + ") (var: " + SCIPvarGetName(lpcands[i]) +
-                                ")\n").c_str());*/
 
             if (score < bestScore || bestScore == -1) {
                 bestcands.clear();
@@ -221,6 +227,29 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
             SCIPfree(&scip_copy);
         }
     }
+}
+
+unsigned int Worker::extractScore(SCIP_VAR *const *lpcands, std::vector<int> &bestcands, int depth, const int *workerMap,
+                                        int &bestScore) const {
+    int score, cand;
+    unsigned workerId;
+    MPI_Status status;
+
+    MPI_Recv(&score, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    workerId = status.MPI_SOURCE;
+    //std::cout << workerId << " is back" <<std::endl;
+    cand = workerMap[workerId - startWorkersRange];
+
+    if(!(depth-1))std::cout << "Score of " << SCIPvarGetName(lpcands[cand]) <<": " << score << std::endl;
+    if (score < bestScore || bestScore == -1) {
+        bestcands.clear();
+        bestcands.push_back(cand);
+        bestScore = score;
+    } else if (score == bestScore) {
+        bestcands.push_back(cand);
+    }
+
+    return workerId;
 }
 
 void Worker::broadcastInstance(const char *name) {
@@ -280,25 +309,23 @@ SCIP * Worker::sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_V
 }
 
 void Worker::setWorkersRange(int start, int end) {
-    if(start > 0) {
-        startWorkersRange = start;
-        endWorkersRange = end;
-        nWorkers = endWorkersRange - startWorkersRange + 1;
-    } else{
-        nWorkers = 0;
-    }
+    startWorkersRange = start;
+    endWorkersRange = end;
+    nWorkers = endWorkersRange - startWorkersRange;
 }
 
-void Worker::sendWorkersRange(unsigned int id, unsigned int start, unsigned int end) {
+void Worker::sendWorkersRange(unsigned int workerRank, unsigned int start, unsigned int end) {
     unsigned data[] = {start, end};
-    MPI_Send(data, 2, MPI_UNSIGNED, id, 1, MPI_COMM_WORLD);
+    MPI_Send(data, 2, MPI_UNSIGNED, workerRank, 1, MPI_COMM_WORLD);
 }
 
 void Worker::getWorkersRange() {
     unsigned data[2];
     MPI_Recv(data, 2, MPI_UNSIGNED, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
     directorRank = status.MPI_SOURCE;
-    setWorkersRange(data[0], data[1]);
+    if(data[0] >= 0 && data[1] >= 0) {
+        setWorkersRange(data[0], data[1]);
+    }
 }
 
 int Worker::getScore(SCIP *scip) {
