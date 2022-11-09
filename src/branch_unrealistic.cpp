@@ -6,6 +6,7 @@
 #include <scip/scipdefplugins.h>
 #include <scip/var.h>
 #include <sstream>
+#include <thread>
 #include "branch_unrealistic.h"
 #include "Utils.h"
 #include "mpi/Worker.h"
@@ -17,10 +18,10 @@
 #define 	BRANCHRULE_MAXBOUNDDIST   1.0
 
 Branch_unrealistic::Branch_unrealistic(SCIP *scip, int depth, int maxdepth, double leafTimeLimit) : ObjBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
-                                                                   BRANCHRULE_MAXBOUNDDIST), depth(depth), maxdepth(maxdepth), leafTimeLimit(leafTimeLimit){}
+                                                                   BRANCHRULE_MAXBOUNDDIST), depth(depth), maxdepth(maxdepth), firstBranch(nullptr), leafTimeLimit(leafTimeLimit){}
 
 Branch_unrealistic::Branch_unrealistic(SCIP *scip, int maxdepth, double leafTimeLimit) : ObjBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
-                                                                                            BRANCHRULE_MAXBOUNDDIST), depth(0), maxdepth(maxdepth), leafTimeLimit(leafTimeLimit){}
+                                                                                            BRANCHRULE_MAXBOUNDDIST), depth(0), maxdepth(maxdepth), firstBranch(nullptr), leafTimeLimit(leafTimeLimit){}
 
 
 
@@ -44,8 +45,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
     // an instruction already exists for the first branching (given by the parent)
     if(firstBranch!=nullptr){
-        //SCIPdebugMsg(scipmain, ("nnodes: " + std::to_string(SCIPgetNSols(scipmain) )+ "\n").c_str());
-        SCIP_CALL( SCIPbranchVar(scip, firstBranch, nullptr, NULL, nullptr) );
+        SCIP_CALL( SCIPbranchVarHole(scip, firstBranch, left, right, nullptr, nullptr) );
         firstBranch=nullptr;
 
         *result = SCIP_BRANCHED;
@@ -96,8 +96,10 @@ int *Branch_unrealistic::getMaxDepthPtr() {
     return &maxdepth;
 }
 
-void Branch_unrealistic::setFirstBranch(SCIP_Var *firstBranch) {
+void Branch_unrealistic::setFirstBranch(SCIP_Var *firstBranch, double left, double right) {
     Branch_unrealistic::firstBranch = firstBranch;
+    this->left = left;
+    this->right = right;
 }
 
 double *Branch_unrealistic::getLeafTimeLimitPtr() {

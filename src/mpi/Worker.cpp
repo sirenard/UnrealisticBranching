@@ -1,6 +1,7 @@
 //
 // Created by simon on 26/10/22.
 //
+#define SCIP_DEBUG
 
 #include "../branch_unrealistic.h"
 #include "../Utils.h"
@@ -79,8 +80,10 @@ SCIP *Worker::retrieveNode() {
     int n = SCIPgetNVars(scipmain);
     SCIP_Real *lb;
     SCIP_Real *ub;
+    SCIP_Real *bestSolVals;
     SCIPallocBlockMemoryArray(scipmain, &lb, n);
     SCIPallocBlockMemoryArray(scipmain, &ub, n);
+    SCIPallocBlockMemoryArray(scipmain, &bestSolVals, n);
     // get lower bounds
     MPI_Recv(lb, n, MPI_DOUBLE, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
@@ -90,22 +93,27 @@ SCIP *Worker::retrieveNode() {
     int firstBrchId;
     MPI_Recv(&firstBrchId, 1, MPI_INT, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
-    double objlimit;
+    double objlimit, left, right;
     MPI_Recv(&objlimit, 1, MPI_DOUBLE, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(bestSolVals, n, MPI_DOUBLE, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(&left, 1, MPI_DOUBLE, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(&right, 1, MPI_DOUBLE, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
-    SCIP* res = createScipInstance(leafTimeLimit, depth, maxdepth, nodeLimit, n, lb, ub, firstBrchId, objlimit);
+    SCIP* res = createScipInstance(leafTimeLimit, depth, maxdepth, nodeLimit, n, lb, ub, firstBrchId, objlimit, bestSolVals, left, right);
 
     SCIPfreeBlockMemoryArray(scipmain, &lb, n);
     SCIPfreeBlockMemoryArray(scipmain, &ub, n);
+    SCIPfreeBlockMemoryArray(scipmain, &bestSolVals, n);
     return res;
 }
 
-SCIP* Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth, int nodeLimit, int n, double* lb, double* ub, int firstBrchId, double objlimit) {
-    SCIP *scip_copy;
+SCIP* Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth, int nodeLimit, int n, double* lb, double* ub, int firstBrchId, double objlimit, double *bestSolvals, double left, double right) {
+    SCIP *scip_copy=nullptr;
     SCIP_Bool valid;
     SCIPcreate(&scip_copy);
+    SCIPenableDebugSol(scip_copy);
 
-    SCIPcopy(scipmain, scip_copy, nullptr, nullptr, ("ub_subsolver" + std::to_string(rank)).c_str(), FALSE, FALSE, FALSE, FALSE, &valid);
+    SCIPcopy(scipmain, scip_copy, nullptr, nullptr, ("ub_subsolver" + std::to_string(rank)).c_str(), TRUE, TRUE, TRUE, TRUE, &valid);
     assert(valid == TRUE);
 
     SCIPcopyParamSettings(scipmain, scip_copy);
@@ -115,7 +123,6 @@ SCIP* Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth, 
     SCIPincludeObjBranchrule(scip_copy, objbranchrule, TRUE);
     Utils::configure_scip_instance(scip_copy, true);
     SCIPsetLongintParam(scip_copy, "limits/nodes", nodeLimit);
-    SCIPsetIntParam(scip_copy,"display/freq",1);
 
     SCIPsetIntParam(scip_copy, "display/verblevel", 0);
     // don't use heuristics on recursion levels
@@ -129,8 +136,15 @@ SCIP* Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth, 
         SCIPchgVarUb(scip_copy, vars[i], ub[i]);
     }
 
-    objbranchrule->setFirstBranch(vars[firstBrchId]);
+    objbranchrule->setFirstBranch(vars[firstBrchId], left, right);
     SCIPsetObjlimit(scip_copy, objlimit);
+
+    SCIP_Sol* sol;
+    SCIPcreateSol(scip_copy, &sol, NULL);
+    SCIPsetSolVals(scip_copy, sol, n, vars, bestSolvals);
+    SCIP_Bool stored;
+    SCIPaddSol(scip_copy, sol, &stored);
+    assert(stored);
 
     return scip_copy;
 }
@@ -178,14 +192,14 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
             } else{
                 nActiveWorkers++;
                 nextWorkerId++;
-                /*if (nFreeWorkers > 1) {
+                if (nFreeWorkers > 1 && depth != maxdepth) {
                     start = firstFreeWorker;
                     int nSelectedWorkers = std::min(nFreeWorkers, nWorkersForEach);
                     end = start + nSelectedWorkers;
                     nFreeWorkers -= nSelectedWorkers;
                     firstFreeWorker += nSelectedWorkers;
                     //std::cout << "Node " << workerId << " has " << nSelectedWorkers << " workers" << std::endl;
-                }*/
+                }
             }
 
             //std::cout << workerId << " on " << i << std::endl;
@@ -273,37 +287,52 @@ SCIP * Worker::sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_V
     SCIP_VAR **vars = SCIPgetVars(scip);
     SCIP_Real *lb;
     SCIP_Real *ub;
+    SCIP_Real *bestSolVals;
     SCIPallocBlockMemoryArray(scip, &ub, n);
     SCIPallocBlockMemoryArray(scip, &lb, n);
+    SCIPallocBlockMemoryArray(scip, &bestSolVals, n);
 
     // send lower bounds
     for(int i=0; i<n; ++i){
-        lb[i] = SCIPcomputeVarLbLocal(scip, vars[i]); // TODO: Or SCIPgetVarLbLocal?
+        //lb[i] = SCIPcomputeVarLbLocal(scip, vars[i]); // TODO: Or SCIPgetVarLbLocal?
+        lb[i] = SCIPvarGetLbLocal(vars[i]); // TODO: Or SCIPgetVarLbLocal?
     }
     if(workerId != rank)MPI_Send(lb, n, MPI_DOUBLE, workerId, 1, MPI_COMM_WORLD);
 
     // send upper bounds
     for(int i=0; i<n; ++i){
-        ub[i] = SCIPcomputeVarUbLocal(scip ,vars[i]);
+        //ub[i] = SCIPcomputeVarUbLocal(scip ,vars[i]);
+        ub[i] = SCIPvarGetUbLocal(vars[i]);
     }
     if(workerId != rank)MPI_Send(ub, n, MPI_DOUBLE, workerId, 1, MPI_COMM_WORLD);
 
     int firstBrchId = SCIPvarGetProbindex(varbrch);
+    assert(firstBrchId >= 0);
+
+    SCIP_Sol* bestSol = SCIPgetBestSol(scip);
+    SCIPgetSolVals(scip, bestSol, n, vars, bestSolVals);
+
+    double varVal = SCIPvarGetLPSol(varbrch);
+    double left = std::floor(varVal);
+    double right = std::ceil(varVal);
 
     if(workerId != rank){
         MPI_Send(&firstBrchId, 1, MPI_INT, workerId, 1, MPI_COMM_WORLD);
         MPI_Send(&objlimit, 1, MPI_DOUBLE, workerId, 1, MPI_COMM_WORLD);
+        MPI_Send(bestSolVals, n, MPI_DOUBLE, workerId, 1, MPI_COMM_WORLD);
+        MPI_Send(&left, 1, MPI_DOUBLE, workerId, 1, MPI_COMM_WORLD);
+        MPI_Send(&right, 1, MPI_DOUBLE, workerId, 1, MPI_COMM_WORLD);
     }
-
 
 
     SCIP* res = nullptr;
     if(workerId == rank){
-        res = createScipInstance(leafTimeLimit, depth, maxdepth, nodeLimit, n, lb, ub, firstBrchId, objlimit);
+        res = createScipInstance(leafTimeLimit, depth, maxdepth, nodeLimit, n, lb, ub, firstBrchId, objlimit, bestSolVals, left, right);
     }
 
     SCIPfreeBlockMemoryArray(scip, &lb, n);
     SCIPfreeBlockMemoryArray(scip, &ub, n);
+    SCIPfreeBlockMemoryArray(scip, &bestSolVals, n);
 
     return res;
 }

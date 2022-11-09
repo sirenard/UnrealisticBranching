@@ -11,20 +11,6 @@
 #include <scip/scip.h>
 
 class Worker {
-    struct VarInfo{
-        SCIP_Vartype type;
-        double lb;
-        double ub;
-        double obj;
-        int nameLength;
-    };
-
-    struct ConsInfo{
-        double lhs;
-        double rhs;
-        int nVar;
-    };
-
     static Worker* instance;
 
     void returnScore(int score);
@@ -72,7 +58,7 @@ public:
 
     SCIP *
     createScipInstance(double leafTimeLimit, int depth, int maxdepth, int nodeLimit, int n, double *lb, double *ub,
-                       int firstBrchId, double objlimit);
+                       int firstBrchId, double objlimit, double *bestSolVals, double left, double right);
 
     int getScore(SCIP *scip);
 

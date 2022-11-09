@@ -21,6 +21,7 @@ private:
     int depth, maxdepth;
     SCIP_Var* firstBranch;
     double leafTimeLimit;
+    double left, right;
 
     SCIP_DECL_BRANCHEXECLP(scip_execlp) override;
 
@@ -31,7 +32,7 @@ public:
     explicit Branch_unrealistic(SCIP *scip, int maxdepth=1, double leafTimeLimit=-1);
     int* getMaxDepthPtr();
 
-    void setFirstBranch(SCIP_Var *firstBranch);
+    void setFirstBranch(SCIP_Var *firstBranch, double d, double d1);
 
     static void setDataWriter(DatasetWriter *dataWriter);
 
