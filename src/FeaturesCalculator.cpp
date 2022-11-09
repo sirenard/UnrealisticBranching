@@ -16,8 +16,8 @@ FeaturesCalculator::FeaturesCalculator(SCIP *scip, int signB, int signC, int sig
         nvars(SCIPgetNVars(scip)),
         nbrchs(0){
     SCIP_Var **vars = SCIPgetVars(scip);
-    int nconss = SCIPgetNConss(scip);
-    SCIP_Cons **conss = SCIPgetConss(scip);
+    int nconss = SCIPgetNOrigConss(scip);
+    SCIP_Cons **conss = SCIPgetOrigConss(scip);
 
     SCIP_Real *consCoefTemp;
     SCIPallocBlockMemoryArray(scip, &consCoefTemp, nvars);
