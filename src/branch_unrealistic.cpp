@@ -60,7 +60,8 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
 
     Worker* worker = Worker::getInstance();
-    worker->computeScores(scip, lpcands, nlpcands, bestcands, bestScore, depth + 1, maxdepth, leafTimeLimit);
+    worker->computeScores(scip, lpcands, nlpcands, bestcands, bestScore, depth + 1, maxdepth, leafTimeLimit,
+                          dataWriter != nullptr && depth == 0);
 
     //int bestcand = bestcands[rand() % bestcands.size()];
     int bestcand = bestcands.at(0); // TODO: chose at random
@@ -111,6 +112,15 @@ SCIP_DECL_BRANCHINIT(Branch_unrealistic::scip_init){
     Worker *worker = Worker::getInstance();
     if(worker->isMaster() && depth==0){
         worker->setScipInstance(scip);
+    }
+    return SCIP_OKAY;
+}
+
+SCIP_DECL_BRANCHEXIT(Branch_unrealistic::scip_exit){
+    SCIP_CALL( scip::ObjBranchrule::scip_init(scip, branchrule) );
+    Worker *worker = Worker::getInstance();
+    if(worker->isMaster() && depth==0){
+        worker->broadcastEnd();
     }
     return SCIP_OKAY;
 }

@@ -5,6 +5,8 @@
 #ifndef LEARNING_WORKER_H
 #define LEARNING_WORKER_H
 
+#define CONTINUE_WORKING_FLAG 0
+#define END_SOLVING_FLAG 1
 
 #include <vector>
 #include <mpi.h>
@@ -27,6 +29,8 @@ class Worker {
     MPI_Status status;
     SCIP* scipmain;
 
+    bool isFinished();
+
 public:
     explicit Worker(unsigned rank);
     static void setInstance(Worker* node);
@@ -45,7 +49,7 @@ public:
 
     void
     computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::vector<int> &bestcands, int &bestScore, int depth,
-                  int maxdepth, double leafTimeLimit);
+                  int maxdepth, double leafTimeLimit, bool limitComputation);
 
     void broadcastInstance(const char *name);
 
@@ -67,6 +71,8 @@ public:
     unsigned int
     extractScore(SCIP_VAR *const *lpcands, std::vector<int> &bestcands, int depth, const int *workerMap,
                  int &bestScore) const;
+
+    void broadcastEnd();
 };
 
 

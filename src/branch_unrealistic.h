@@ -27,6 +27,8 @@ private:
 
     SCIP_DECL_BRANCHINIT(scip_init) override;
 
+    SCIP_DECL_BRANCHEXIT(scip_exit) override;
+
 
 public:
     explicit Branch_unrealistic(SCIP *scip, int maxdepth=1, double leafTimeLimit=-1);
