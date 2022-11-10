@@ -76,7 +76,7 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
     } else{
         SCIP_CALL( SCIPsetIntParam(scip,"branching/vanillafullstrong/priority",536870911) );
         SCIP_CALL( SCIPsetIntParam(scip,"branching/unrealistic/priority",0) );
-        SCIP_CALL( SCIPsetIntParam(scip,"display/freq",1) );
+        SCIP_CALL( SCIPsetIntParam(scip,"display/freq",100) );
         //SCIP_CALL( SCIPsetRealParam(scipmain,"limits/time",1) );
     }
 

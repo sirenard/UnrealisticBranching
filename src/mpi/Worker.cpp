@@ -5,7 +5,7 @@
 
 #include "../branch_unrealistic.h"
 #include "../Utils.h"
-#include <scip/scipdefplugins.h>
+#include <iostream>
 #include "Worker.h"
 
 Worker* Worker::instance = nullptr;
