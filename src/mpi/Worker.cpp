@@ -53,8 +53,9 @@ void Worker::returnScore(int score) {
 void Worker::retrieveInstance() {
     int len;
     MPI_Bcast(&len, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    char* name =  new char[len];
+    char* name =  new char[len+1];
     MPI_Bcast(name, len, MPI_CHAR, 0, MPI_COMM_WORLD);
+    name[len] = '\0';
 
     SCIPreadProb(scipmain, name, NULL);
     delete[] name;
@@ -126,7 +127,7 @@ SCIP* Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth, 
     SCIPsetIntParam(scip_copy, "display/verblevel", 0);
     // don't use heuristics on recursion levels
     SCIPsetHeuristics(scip_copy, SCIP_PARAMSETTING_OFF, TRUE);
-    SCIPsetRealParam(scip_copy,"limits/time",600);
+    SCIPsetRealParam(scip_copy,"limits/time",1e+20);
 
     SCIP_VAR **vars = SCIPgetVars(scip_copy);
     // set lower bounds
@@ -150,7 +151,7 @@ SCIP* Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth, 
 
 void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::vector<int> &bestcands, int &bestScore,
                            int depth,
-                           int maxdepth, double leafTimeLimit, bool limitComputation) {
+                           int maxdepth, double leafTimeLimit, bool noNodeLimitation) {
     int nUnusedWorkers = nWorkers - nlpcands;
     int nWorkersForEach;
     if(nUnusedWorkers > 0){
@@ -168,6 +169,7 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
         objlimit = SCIPsolGetOrigObj(bestSol);
     }
 
+    //std::cout << "Work for " << rank << " with" << nWorkers << " workers" << std::endl;
     if(nWorkers) {
         int nFreeWorkers = nWorkers - nlpcands;
         int firstFreeWorker = startWorkersRange + nlpcands;
@@ -175,10 +177,9 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
         int nActiveWorkers = 0;
         unsigned nextWorkerId = startWorkersRange;
 
-        //std::cout << startWorkersRange << " to " << endWorkersRange << ", " << nlpcands << " cands" << std::endl;
         for (int i = 0; i < nlpcands; ++i) {
             unsigned workerId = nextWorkerId;
-            unsigned start = 0, end = 0;
+            int start = 0, end = 0;
             int flag=0;
             MPI_Iprobe( MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status );
             if(flag || nextWorkerId == endWorkersRange){ // an old worker is available
@@ -204,7 +205,7 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
             MPI_Send(&instruction, 1, MPI_SHORT, workerId, 0, MPI_COMM_WORLD);
             sendWorkersRange(workerId, start, end);
             int nodelimit = -1;
-            if(!limitComputation && bestScore < INT_MAX && bestScore != -1){
+            if(!noNodeLimitation && bestScore < INT_MAX && bestScore != -1){
                 nodelimit = bestScore + 1;
             }
             sendNode(scip, workerId, nodelimit, lpcands[i], depth, maxdepth, objlimit, leafTimeLimit);
@@ -218,7 +219,7 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
     } else{ // no worker available, it's time to do the work by yourself
         for(int i=0; i < nlpcands; ++i){
             int nodelimit = -1;
-            if(!limitComputation && bestScore < INT_MAX && bestScore != -1){
+            if(!noNodeLimitation && bestScore < INT_MAX && bestScore != -1){
                 nodelimit = bestScore + 1;
             }
             SCIP* scip_copy = sendNode(scip, rank, nodelimit, lpcands[i], depth, maxdepth,
@@ -339,14 +340,14 @@ void Worker::setWorkersRange(int start, int end) {
     nWorkers = endWorkersRange - startWorkersRange;
 }
 
-void Worker::sendWorkersRange(unsigned int workerRank, unsigned int start, unsigned int end) {
-    unsigned data[] = {start, end};
-    MPI_Send(data, 2, MPI_UNSIGNED, workerRank, 1, MPI_COMM_WORLD);
+void Worker::sendWorkersRange(unsigned int workerRank, int start, int end) {
+    int data[] = {start, end};
+    MPI_Send(data, 2, MPI_INT, workerRank, 1, MPI_COMM_WORLD);
 }
 
 void Worker::getWorkersRange() {
-    unsigned data[2];
-    MPI_Recv(data, 2, MPI_UNSIGNED, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    int data[2];
+    MPI_Recv(data, 2, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
     directorRank = status.MPI_SOURCE;
     if(data[0] >= 0 && data[1] >= 0) {
         setWorkersRange(data[0], data[1]);
@@ -363,7 +364,6 @@ int Worker::getScore(SCIP *scip) {
             score = SCIPgetNNodes(scip);
             break;
         case SCIP_STATUS_TIMELIMIT:
-            SCIPdebugMsg(scip, ("Time limit: " + std::to_string(SCIPgetTotalTime(scip)) + "\n").c_str());
             break;
     }
     return score;

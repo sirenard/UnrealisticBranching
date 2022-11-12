@@ -49,14 +49,14 @@ public:
 
     void
     computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::vector<int> &bestcands, int &bestScore, int depth,
-                  int maxdepth, double leafTimeLimit, bool limitComputation);
+                  int maxdepth, double leafTimeLimit, bool noNodeLimitation);
 
     void broadcastInstance(const char *name);
 
     SCIP *
     sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_VAR *varbrch, int depth, int maxdepth, double objlimit, double leafTimeLimit);
 
-    void sendWorkersRange(unsigned int workerRank, unsigned int start, unsigned int end);
+    void sendWorkersRange(unsigned int workerRank, int start, int end);
 
     void getWorkersRange();
 
