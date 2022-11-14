@@ -63,8 +63,8 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
     worker->computeScores(scip, lpcands, nlpcands, bestcands, bestScore, depth + 1, maxdepth, leafTimeLimit,
                           dataWriter != nullptr && depth == 0);
 
-    //int bestcand = bestcands[rand() % bestcands.size()];
-    int bestcand = bestcands.at(0); // TODO: chose at random
+    int bestcand = bestcands[rand() % bestcands.size()];
+    //int bestcand = bestcands.at(0); // TODO: chose at random
     for(auto k: bestcands){
         if(k<bestcand) bestcand = k;
     }
