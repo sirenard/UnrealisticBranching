@@ -59,6 +59,7 @@ void Worker::retrieveInstance() {
 
     SCIPreadProb(scipmain, name, NULL);
     delete[] name;
+    MPI_Barrier(MPI_COMM_WORLD);
 }
 
 void Worker::createScipInstance() {
@@ -173,7 +174,7 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
     if(nWorkers) {
         int nFreeWorkers = nWorkers - nlpcands;
         int firstFreeWorker = startWorkersRange + nlpcands;
-        int *workerMap = new int[nlpcands];
+        int *workerMap = new int[nWorkers]; // workermap[i]=j -> The i th worker works on candidate j
         int nActiveWorkers = 0;
         unsigned nextWorkerId = startWorkersRange;
 
@@ -182,7 +183,7 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
             int start = 0, end = 0;
             int flag=0;
             MPI_Iprobe( MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status );
-            if(flag || nextWorkerId == endWorkersRange){ // an old worker is available
+            if(flag || nextWorkerId == endWorkersRange){ // an old worker is available or no more available worker
                 workerId = extractScore(lpcands, bestcands, depth, workerMap, bestScore);
                 start = -1;
                 end = -1;
@@ -269,6 +270,7 @@ void Worker::broadcastInstance(const char *name) {
 
     MPI_Bcast(&len, 1, MPI_INT, rank, MPI_COMM_WORLD);
     MPI_Bcast((void*)name, len, MPI_CHAR, rank, MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
 }
 
 SCIP * Worker::sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_VAR *varbrch, int depth, int maxdepth,
