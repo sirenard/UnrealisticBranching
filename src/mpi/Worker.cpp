@@ -134,8 +134,8 @@ SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth,
 
     SCIPsetIntParam(scip_copy, "display/verblevel", 0);
     // don't use heuristics on recursion levels
-    SCIPsetHeuristics(scip_copy, SCIP_PARAMSETTING_OFF, TRUE);
-    SCIPsetRealParam(scip_copy,"limits/time",1e+20);
+    //SCIPsetHeuristics(scip_copy, SCIP_PARAMSETTING_OFF, TRUE);
+    //SCIPsetRealParam(scip_copy,"limits/time",1e+20);
 
     SCIP_VAR **vars = SCIPgetVars(scip_copy);
     // set lower bounds
