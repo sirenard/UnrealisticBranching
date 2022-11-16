@@ -100,7 +100,11 @@ SCIP *Worker::retrieveNode() {
     MPI_Recv(&left, 1, MPI_DOUBLE, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
     MPI_Recv(&right, 1, MPI_DOUBLE, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
-    SCIP* res = createScipInstance(leafTimeLimit, depth, maxdepth, nodeLimit, n, lb, ub, firstBrchId, objlimit, bestSolVals, left, right);
+    int branchingMaxDepth;
+    MPI_Recv(&branchingMaxDepth, 1, MPI_INT, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+
+    SCIP* res = createScipInstance(leafTimeLimit, depth, maxdepth, nodeLimit, n, lb, ub, firstBrchId, objlimit,
+                                   bestSolVals, left, right, branchingMaxDepth);
 
     SCIPfreeBlockMemoryArray(scipmain, &lb, n);
     SCIPfreeBlockMemoryArray(scipmain, &ub, n);
@@ -108,7 +112,10 @@ SCIP *Worker::retrieveNode() {
     return res;
 }
 
-SCIP* Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth, int nodeLimit, int n, double* lb, double* ub, int firstBrchId, double objlimit, double *bestSolvals, double left, double right) {
+SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth, int nodeLimit, int n, double *lb,
+                                  double *ub,
+                                  int firstBrchId, double objlimit, double *bestSolvals, double left, double right,
+                                  int branchingMaxDepth) {
     SCIP *scip_copy=nullptr;
     SCIP_Bool valid;
     SCIPcreate(&scip_copy);
@@ -146,6 +153,8 @@ SCIP* Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth, 
     SCIP_Bool stored;
     SCIPaddSol(scip_copy, sol, &stored);
     assert(stored);
+
+    SCIPsetIntParam(scip_copy, "branching/unrealistic/maxdepth", branchingMaxDepth);
 
     return scip_copy;
 }
@@ -315,18 +324,23 @@ SCIP * Worker::sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_V
     double left = std::floor(varVal);
     double right = std::ceil(varVal);
 
+    int branchingMaxDepth;
+    SCIPgetIntParam(scip, "branching/unrealistic/maxdepth", &branchingMaxDepth);
+
     if(workerId != rank){
         MPI_Send(&firstBrchId, 1, MPI_INT, workerId, 1, MPI_COMM_WORLD);
         MPI_Send(&objlimit, 1, MPI_DOUBLE, workerId, 1, MPI_COMM_WORLD);
         MPI_Send(bestSolVals, n, MPI_DOUBLE, workerId, 1, MPI_COMM_WORLD);
         MPI_Send(&left, 1, MPI_DOUBLE, workerId, 1, MPI_COMM_WORLD);
         MPI_Send(&right, 1, MPI_DOUBLE, workerId, 1, MPI_COMM_WORLD);
+        MPI_Send(&branchingMaxDepth, 1, MPI_INT, workerId, 1, MPI_COMM_WORLD);
     }
 
 
     SCIP* res = nullptr;
     if(workerId == rank){
-        res = createScipInstance(leafTimeLimit, depth, maxdepth, nodeLimit, n, lb, ub, firstBrchId, objlimit, bestSolVals, left, right);
+        res = createScipInstance(leafTimeLimit, depth, maxdepth, nodeLimit, n, lb, ub, firstBrchId, objlimit,
+                                 bestSolVals, left, right, branchingMaxDepth);
     }
 
     SCIPfreeBlockMemoryArray(scip, &lb, n);

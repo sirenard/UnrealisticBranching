@@ -12,7 +12,7 @@ else()
 endif()
 
 #set(DLIB_PATH /home/simon/Téléchargements/dlib-19.24)
-find_package(DLIB REQUIRED)
+find_package(dlib REQUIRED)
 #include_directories(${DLIB_PATH})
 #target_link_libraries(scip_learning ${DLIB_PATH} dlib)
 #add_subdirectory(${DLIB_PATH} dlib_build)

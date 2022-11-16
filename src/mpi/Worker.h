@@ -62,7 +62,8 @@ public:
 
     SCIP *
     createScipInstance(double leafTimeLimit, int depth, int maxdepth, int nodeLimit, int n, double *lb, double *ub,
-                       int firstBrchId, double objlimit, double *bestSolVals, double left, double right);
+                       int firstBrchId, double objlimit, double *bestSolvals, double left, double right,
+                       int branchingMaxDepth);
 
     int getScore(SCIP *scip);
 

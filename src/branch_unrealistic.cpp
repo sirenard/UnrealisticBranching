@@ -50,8 +50,8 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
         *result = SCIP_BRANCHED;
         if(depth>=maxdepth){
-            SCIP_CALL( SCIPsetRealParam(scip, "limits/time", leafTimeLimit));
             SCIP_CALL( Utils::configure_scip_instance(scip, false) );
+            SCIP_CALL( SCIPsetRealParam(scip, "limits/time", leafTimeLimit));
         } else{
             SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
         }
