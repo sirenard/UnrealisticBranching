@@ -49,7 +49,7 @@ public:
 
     void
     computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::vector<int> &bestcands, int &bestScore, int depth,
-                  int maxdepth, double leafTimeLimit, bool noNodeLimitation);
+                  int maxdepth, double leafTimeLimit, bool noNodeLimitation, int *varScores);
 
     void broadcastInstance(const char *name);
 
@@ -71,7 +71,7 @@ public:
 
     unsigned int
     extractScore(SCIP_VAR *const *lpcands, std::vector<int> &bestcands, int depth, const int *workerMap,
-                 int &bestScore) const;
+                 int &bestScore, int *varScores) const;
 
     void broadcastEnd();
 };

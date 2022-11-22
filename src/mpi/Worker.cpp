@@ -134,7 +134,7 @@ SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth,
 
     SCIPsetIntParam(scip_copy, "display/verblevel", 0);
     // don't use heuristics on recursion levels
-    //SCIPsetHeuristics(scip_copy, SCIP_PARAMSETTING_OFF, TRUE);
+    SCIPsetHeuristics(scip_copy, SCIP_PARAMSETTING_OFF, TRUE);
     //SCIPsetRealParam(scip_copy,"limits/time",1e+20);
 
     SCIP_VAR **vars = SCIPgetVars(scip_copy);
@@ -142,6 +142,7 @@ SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth,
     for(int i=0; i<n; ++i){
         SCIPchgVarLb(scip_copy, vars[i], lb[i]);
         SCIPchgVarUb(scip_copy, vars[i], ub[i]);
+        SCIPvarSetRemovable(vars[i], FALSE);
     }
 
     objbranchrule->setFirstBranch(vars[firstBrchId], left, right);
@@ -161,7 +162,7 @@ SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth,
 
 void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::vector<int> &bestcands, int &bestScore,
                            int depth,
-                           int maxdepth, double leafTimeLimit, bool noNodeLimitation) {
+                           int maxdepth, double leafTimeLimit, bool noNodeLimitation, int *varScores) {
     int nUnusedWorkers = nWorkers - nlpcands;
     int nWorkersForEach;
     if(nUnusedWorkers > 0){
@@ -193,7 +194,7 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
             int flag=0;
             MPI_Iprobe( MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status );
             if(flag || nextWorkerId == endWorkersRange){ // an old worker is available or no more available worker
-                workerId = extractScore(lpcands, bestcands, depth, workerMap, bestScore);
+                workerId = extractScore(lpcands, bestcands, depth, workerMap, bestScore, nullptr);
                 start = -1;
                 end = -1;
 
@@ -222,7 +223,7 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
         }
 
         for(int j=0; j<nActiveWorkers; ++j){
-            extractScore(lpcands, bestcands, depth, workerMap, bestScore);
+            extractScore(lpcands, bestcands, depth, workerMap, bestScore, varScores);
         }
 
         delete[] workerMap;
@@ -246,13 +247,15 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
             } else if (score == bestScore) {
                 bestcands.push_back(i);
             }
+            varScores[i] = score;
             SCIPfree(&scip_copy);
         }
     }
 }
 
-unsigned int Worker::extractScore(SCIP_VAR *const *lpcands, std::vector<int> &bestcands, int depth, const int *workerMap,
-                                        int &bestScore) const {
+unsigned int
+Worker::extractScore(SCIP_VAR *const *lpcands, std::vector<int> &bestcands, int depth, const int *workerMap,
+                     int &bestScore, int *varScores) const {
     int score, cand;
     unsigned workerId;
     MPI_Status status;
@@ -269,6 +272,8 @@ unsigned int Worker::extractScore(SCIP_VAR *const *lpcands, std::vector<int> &be
     } else if (score == bestScore) {
         bestcands.push_back(cand);
     }
+
+    varScores[cand] = score;
 
     return workerId;
 }

@@ -104,8 +104,9 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
     SCIP_CALL(SCIPsetIntParam(scip, "pricing/maxvars", 1));
     SCIP_CALL(SCIPsetIntParam(scip, "pricing/maxvarsroot", 1));
 
-    //SCIP_CALL(SCIPsetBoolParam(scip, "benders/copybenders", FALSE));
-    //SCIP_CALL(SCIPsetBoolParam(scip, "benders/cutlpsol", FALSE));
+    SCIP_CALL(SCIPsetBoolParam(scip, "benders/copybenders", FALSE));
+    SCIP_CALL(SCIPsetBoolParam(scip, "benders/cutlpsol", FALSE));
+
     return SCIP_OKAY;
 }
 
