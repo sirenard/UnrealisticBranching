@@ -20,11 +20,11 @@ FeaturesCalculator::FeaturesCalculator(SCIP *scip, int signB, int signC, int sig
     SCIP_Cons **conss = SCIPgetOrigConss(scip);
 
     SCIP_Real *consCoefTemp;
-    SCIPallocBlockMemoryArray(scip, &consCoefTemp, nvars);
+    SCIPallocBufferArray(scip, &consCoefTemp, nvars);
     SCIP_Real *consCoef;
-    SCIPallocBlockMemoryArray(scip, &consCoef, nvars);
+    SCIPallocBufferArray(scip, &consCoef, nvars);
     SCIP_Var **consVars;
-    SCIPallocBlockMemoryArray(scip, &consVars, nvars);
+    SCIPallocBufferArray(scip, &consVars, nvars);
 
     for(int i=0; i<nvars; ++i){
         varnameIndexMap[SCIPvarGetName(vars[i])] = i;
@@ -105,9 +105,10 @@ FeaturesCalculator::FeaturesCalculator(SCIP *scip, int signB, int signC, int sig
         }
     }
 
-    SCIPfreeBlockMemoryArray(scip, &consCoef, nvars);
-    SCIPfreeBlockMemoryArray(scip, &consCoefTemp, nvars);
-    SCIPfreeBlockMemoryArray(scip, &consVars, nvars);
+    SCIPfreeBufferArray(scip, &consVars);
+    SCIPfreeBufferArray(scip, &consCoef);
+    SCIPfreeBufferArray(scip, &consCoefTemp);
+
 }
 
 void FeaturesCalculator::computeSet1StaticFeatures(int signC, SCIP_Var *const *vars, int i, double *features,

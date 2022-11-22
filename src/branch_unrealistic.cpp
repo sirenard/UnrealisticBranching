@@ -40,8 +40,8 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
     for (int i = 0; i < nlpcands; ++i)lpcandsfrac[i] = SCIPvarGetLPSol(lpcands[i]);
 
 
-    int* varScores; // store every variable's realNnodes
-    SCIPallocBlockMemoryArray(scip, &varScores, nlpcands);
+    int* varScores = nullptr; // store every variable's realNnodes
+    if(dataWriter != nullptr && depth == 0)SCIP_CALL(SCIPallocBufferArray(scip, &varScores, nlpcands));
 
     // an instruction already exists for the first branching (given by the parent)
     if(firstBranch!=nullptr){
@@ -84,7 +84,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
         dataWriter->addNode(scip, children, nlpcands, varScores, lpcands, bestcand);
     }
 
-    SCIPfreeBlockMemoryArray(scip, &varScores, nlpcands);
+    if(dataWriter != nullptr && depth == 0)SCIPfreeBufferArray(scip, &varScores);
     return SCIP_OKAY;
 }
 

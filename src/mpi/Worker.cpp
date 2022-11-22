@@ -82,9 +82,9 @@ SCIP *Worker::retrieveNode() {
     SCIP_Real *lb;
     SCIP_Real *ub;
     SCIP_Real *bestSolVals;
-    SCIPallocBlockMemoryArray(scipmain, &lb, n);
-    SCIPallocBlockMemoryArray(scipmain, &ub, n);
-    SCIPallocBlockMemoryArray(scipmain, &bestSolVals, n);
+    SCIPallocBufferArray(scipmain, &lb, n);
+    SCIPallocBufferArray(scipmain, &ub, n);
+    SCIPallocBufferArray(scipmain, &bestSolVals, n);
     // get lower bounds
     MPI_Recv(lb, n, MPI_DOUBLE, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
@@ -106,9 +106,9 @@ SCIP *Worker::retrieveNode() {
     SCIP* res = createScipInstance(leafTimeLimit, depth, maxdepth, nodeLimit, n, lb, ub, firstBrchId, objlimit,
                                    bestSolVals, left, right, branchingMaxDepth);
 
-    SCIPfreeBlockMemoryArray(scipmain, &lb, n);
-    SCIPfreeBlockMemoryArray(scipmain, &ub, n);
-    SCIPfreeBlockMemoryArray(scipmain, &bestSolVals, n);
+    SCIPfreeBufferArray(scipmain, &bestSolVals);
+    SCIPfreeBufferArray(scipmain, &ub);
+    SCIPfreeBufferArray(scipmain, &lb);
     return res;
 }
 
@@ -247,7 +247,7 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
             } else if (score == bestScore) {
                 bestcands.push_back(i);
             }
-            varScores[i] = score;
+            if(varScores)varScores[i] = score;
             SCIPfree(&scip_copy);
         }
     }
@@ -273,7 +273,7 @@ Worker::extractScore(SCIP_VAR *const *lpcands, std::vector<int> &bestcands, int 
         bestcands.push_back(cand);
     }
 
-    varScores[cand] = score;
+    if(varScores)varScores[cand] = score;
 
     return workerId;
 }
@@ -301,9 +301,9 @@ SCIP * Worker::sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_V
     SCIP_Real *lb;
     SCIP_Real *ub;
     SCIP_Real *bestSolVals;
-    SCIPallocBlockMemoryArray(scip, &ub, n);
-    SCIPallocBlockMemoryArray(scip, &lb, n);
-    SCIPallocBlockMemoryArray(scip, &bestSolVals, n);
+    SCIPallocBufferArray(scip, &ub, n);
+    SCIPallocBufferArray(scip, &lb, n);
+    SCIPallocBufferArray(scip, &bestSolVals, n);
 
     // send lower bounds
     for(int i=0; i<n; ++i){
@@ -348,9 +348,9 @@ SCIP * Worker::sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_V
                                  bestSolVals, left, right, branchingMaxDepth);
     }
 
-    SCIPfreeBlockMemoryArray(scip, &lb, n);
-    SCIPfreeBlockMemoryArray(scip, &ub, n);
-    SCIPfreeBlockMemoryArray(scip, &bestSolVals, n);
+    SCIPfreeBufferArray(scip, &bestSolVals);
+    SCIPfreeBufferArray(scip, &ub);
+    SCIPfreeBufferArray(scip, &lb);
 
     return res;
 }
@@ -404,6 +404,7 @@ void Worker::broadcastEnd() {
     for(int workerId = startWorkersRange; workerId < endWorkersRange; workerId++){
         MPI_Send(&instruction, 1, MPI_SHORT, workerId, 0, MPI_COMM_WORLD);
     }
+    SCIPfree(&scipmain);
 }
 
 bool Worker::isFinished() {
