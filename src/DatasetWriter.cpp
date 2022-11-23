@@ -27,6 +27,8 @@ DatasetWriter::addNode(SCIP *scip, SCIP_NODE **node, int nlpcands, int *varScore
         if(maxScore != varScores[bestCand])
             score = (double)(maxScore - varScores[i])/(maxScore - varScores[bestCand]);
         else score=1;
+
+        if(score < 0 || score > 1)continue; //something wrong appends, drop the data
         SCIP_VAR* var = lpcands[i];
         writeLine(var, score);
     }

@@ -24,7 +24,7 @@ SCIP_RETCODE runSCIP(
     /*********
      * Setup *
      *********/
-    Utils::create_scip_instance(&scip, 1);
+    Utils::create_scip_instance(&scip, true);
 
     SCIP_CALL( SCIPprocessShellArguments(scip, 1, nullptr, "scipmain.set") );
    /********************
@@ -54,12 +54,12 @@ int main(
     node = new Worker(rank); // if only 1 CPU, the unique node is not seen as a master
     Worker::setInstance(node);
 
+    srand (time(NULL));
     if(rank == 0){ // master node
         if(world_size > 1)
             node->setWorkersRange(1, world_size);
 
         SCIP_RETCODE retcode;
-        srand (time(NULL));
 
         retcode = runSCIP(argc, argv);
         if( retcode != SCIP_OKAY )
