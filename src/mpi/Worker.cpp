@@ -106,6 +106,7 @@ SCIP *Worker::retrieveNode() {
     SCIP* res = createScipInstance(leafTimeLimit, depth, maxdepth, nodeLimit, n, lb, ub, firstBrchId, objlimit,
                                    bestSolVals, left, right, branchingMaxDepth);
 
+
     SCIPfreeBufferArray(scipmain, &bestSolVals);
     SCIPfreeBufferArray(scipmain, &ub);
     SCIPfreeBufferArray(scipmain, &lb);
@@ -349,8 +350,8 @@ SCIP * Worker::sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_V
     }
 
     SCIPfreeBufferArray(scip, &bestSolVals);
-    SCIPfreeBufferArray(scip, &ub);
     SCIPfreeBufferArray(scip, &lb);
+    SCIPfreeBufferArray(scip, &ub);
 
     return res;
 }
