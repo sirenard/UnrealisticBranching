@@ -8,6 +8,7 @@
 #include <iostream>
 #include <scip/scipdefplugins.h>
 #include <algorithm>
+#include <scip/cons.h>
 #include "Worker.h"
 
 Worker* Worker::instance = nullptr;
@@ -52,13 +53,12 @@ void Worker::returnScore(int score) {
 void Worker::retrieveInstance() {
     int len;
     MPI_Bcast(&len, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    //char* name =  new char[len+1];
-    name =  new char[len+1];
+    char* name =  new char[len+1];
     MPI_Bcast(name, len, MPI_CHAR, 0, MPI_COMM_WORLD);
     name[len] = '\0';
 
     SCIPreadProb(scipmain, name, NULL);
-    //delete[] name;
+    delete[] name;
     MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -123,13 +123,10 @@ SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth,
     SCIP *scip_copy=nullptr;
     SCIP_Bool valid;
     SCIPcreate(&scip_copy);
-
-    //SCIPcopy(scipmain, scip_copy, nullptr, nullptr, name, FALSE, FALSE, FALSE, TRUE, &valid);
-    //assert(valid == TRUE);
-
     SCIPenableDebugSol(scip_copy);
-    SCIPincludeDefaultPlugins(scip_copy);
 
+    SCIPcopy(scipmain, scip_copy, nullptr, nullptr, "sub_", TRUE, FALSE, TRUE, TRUE, &valid);
+    assert(valid == TRUE);
 
     //SCIPcopyParamSettings(scipmain, scip_copy);
 
@@ -148,29 +145,20 @@ SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth,
     SCIPsetHeuristics(scip_copy, SCIP_PARAMSETTING_OFF, TRUE);
     //SCIPsetRealParam(scip_copy,"limits/time",1e+20);
 
-    SCIPreadProb(scip_copy, name, nullptr);
-    SCIPtransformProb(scip_copy);
-    SCIPsetHeuristics(scip_copy, SCIP_PARAMSETTING_DEFAULT, TRUE);
-
     SCIP_VAR **vars = new SCIP_VAR*[n];
     memcpy(vars, SCIPgetVars(scip_copy), n*sizeof(SCIP_VAR*));
     sortVarsArray(vars, n);
-    int x;
 
     // set lower bounds
     for(int i=0; i<n; ++i){
-        if((strcmp(SCIPvarGetName(vars[i]), "t_x99")==0 || strcmp(SCIPvarGetName(vars[i]), "x99")==0) && lb[i]>1){
-            int x=2;
-        }
-        //vars = SCIPgetVars(scip_copy);
         //SCIPvarSetRemovable(vars[i], FALSE);
         /*if(lb[i] == ub[i]){
             SCIP_Bool fixed, infeasible;
             SCIPfixVar(scip_copy, vars[i], ub[i], &infeasible, &fixed);
             assert(fixed);*/
         //} else {
-        SCIPchgVarLbGlobal(scip_copy, vars[i], lb[i]);
-        SCIPchgVarUbGlobal(scip_copy, vars[i], ub[i]);
+            SCIPchgVarLbGlobal(scip_copy, vars[i], lb[i]);
+            SCIPchgVarUbGlobal(scip_copy, vars[i], ub[i]);
         //}
     }
 
@@ -184,6 +172,8 @@ SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth,
     SCIP_Bool stored;
     SCIPaddSol(scip_copy, sol, &stored);
     assert(stored);
+    SCIPfreeSol(scip_copy, &sol);
+
 
     //SCIPsetIntParam(scip_copy, "branching/unrealistic/maxdepth", branchingMaxDepth);
     delete[] vars;
@@ -362,19 +352,11 @@ SCIP * Worker::sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_V
 
     // send lower bounds
     for(int i=0; i<n; ++i){
-        //lb[i] = SCIPcomputeVarLbLocal(scip, vars[i]); // TODO: Or SCIPgetVarLbLocal?
-        lb[i] = SCIPvarGetLbLocal(vars[i]); // TODO: Or SCIPgetVarLbLocal?
-        if((strcmp(SCIPvarGetName(vars[i]), "t_x99")==0) && lb[i]>1){
-            int x=2;
-        }
+        SCIP_VAR *var=vars[i];
+        lb[i] = SCIPvarGetLbGlobal(var); // TODO: Or SCIPgetVarLbLocal?
+        ub[i] = SCIPvarGetUbGlobal(var);
     }
     if(workerId != rank)MPI_Send(lb, n, MPI_DOUBLE, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
-
-    // send upper bounds
-    for(int i=0; i<n; ++i){
-        //ub[i] = SCIPcomputeVarUbLocal(scip ,vars[i]);
-        ub[i] = SCIPvarGetUbLocal(vars[i]);
-    }
     if(workerId != rank)MPI_Send(ub, n, MPI_DOUBLE, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
 
     int firstBrchId=-1;
@@ -541,7 +523,7 @@ void Worker::updateWork(unsigned int workerRank, int task, int *workerMap) {
 
 void Worker::sortVarsArray(SCIP_VAR **vars, int n) {
     struct {
-        bool operator()(SCIP_VAR* a, SCIP_VAR* b) const { return SCIPvarGetName(a) < SCIPvarGetName(b); }
+        bool operator()(SCIP_VAR* a, SCIP_VAR* b) const { return SCIPvarGetIndex(a) < SCIPvarGetIndex(b); }
     } customLess;
     std::sort(vars, vars+n, customLess);
 }

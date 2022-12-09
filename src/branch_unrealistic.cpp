@@ -50,6 +50,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
         SCIP_CALL( SCIPbranchVarHole(scip, firstBranch, left, right, nullptr, nullptr) );
         *result = SCIP_BRANCHED;
         firstBranch=nullptr;
+        SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
 
         /**result = SCIP_BRANCHED;
         SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
