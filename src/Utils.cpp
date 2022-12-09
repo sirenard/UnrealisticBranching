@@ -53,7 +53,7 @@ SCIP_Retcode Utils::create_scip_instance(SCIP** scipp, bool addBranchScheme) {
             "Time limit allowed to the leaf of the recursion tree (not solved using the unrealistic branching). -1 for no limit ",
             objbranchrule->getLeafTimeLimitPtr(),
             FALSE,
-            1,
+            120,
             -1,
             1e+20,
             NULL,
@@ -88,7 +88,7 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
     SCIP_CALL(SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE));
     SCIP_CALL(SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE));
 
-    SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+    //SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
 
     //SCIP_CALL( SCIPsetIntParam(scip,"nodeselection/random/stdpriority",900000) );
     //SCIP_CALL( SCIPsetIntParam(scip,"nodeselection/dfs/stdpriority",900000) );
@@ -104,6 +104,7 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
     SCIP_CALL(SCIPsetIntParam(scip, "separating/maxruns", 0));
     SCIP_CALL(SCIPsetIntParam(scip, "pricing/maxvars", 1));
     SCIP_CALL(SCIPsetIntParam(scip, "pricing/maxvarsroot", 1));
+    SCIP_CALL(SCIPsetIntParam(scip, "constraints/bounddisjunction/propfreq", -1));
 
     SCIP_CALL(SCIPsetBoolParam(scip, "benders/copybenders", FALSE));
     SCIP_CALL(SCIPsetBoolParam(scip, "benders/cutlpsol", FALSE));

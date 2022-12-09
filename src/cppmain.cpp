@@ -26,7 +26,7 @@ SCIP_RETCODE runSCIP(
      *********/
     Utils::create_scip_instance(&scip, true);
 
-    SCIP_CALL( SCIPprocessShellArguments(scip, 1, nullptr, "scipmain.set") );
+    SCIP_CALL( SCIPprocessShellArguments(scip, argc, argv, "scipmain.set") );
    /********************
     * Deinitialization *
     ********************/

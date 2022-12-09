@@ -36,6 +36,19 @@ class Worker {
     MPI_Status status;
     SCIP* scipmain;
 
+    struct VarInfo{
+        SCIP_Vartype type;
+        double lb;
+        double ub;
+        double obj;
+    };
+
+    struct ConsInfo{
+        double lhs;
+        double rhs;
+        int nVar;
+    };
+
     bool isFinished();
 
     /**
@@ -47,7 +60,7 @@ class Worker {
     unsigned* findAvailableWorkers(unsigned& n, int task, int *workerMap);
     void updateWork(unsigned workerRank, int task, int* workerMap);
 
-    void freeWorkers(int task, int* workerMap);
+    void transferWorkers(int fromTask, int *workerMap, int n);
 
     /**
      * Find the index i s.t. workers[i] = workerRank
@@ -57,6 +70,7 @@ class Worker {
     unsigned findWorkerIndex(unsigned workerRank) const;
 
     static void sortVarsArray(SCIP_VAR** vars, int n);
+    static int findVar(SCIP_VAR *var, SCIP_VAR **vars, int n);
 
 public:
     explicit Worker(unsigned rank);
@@ -88,9 +102,9 @@ public:
     void getWorkersRange();
 
     SCIP *
-    createScipInstance(double leafTimeLimit, int depth, int maxdepth, int nodeLimit, int n, double *lb, double *ub,
-                       int firstBrchId, double objlimit, double *bestSolvals, double left, double right,
-                       int branchingMaxDepth);
+    createScipInstance(double leafTimeLimit, int depth, int maxdepth, int nodeLimit, int n, int m, int firstBrchId,
+                       double left, double right, double objlimit, VarInfo *varInfo, ConsInfo *consInfo,
+                       int **consvarIndexes, double **consvarCoefs, int branchingMaxDepth, double *bestSolVals);
 
     int getScore(SCIP *scip);
 
