@@ -19,12 +19,12 @@ FeaturesCalculator::FeaturesCalculator(SCIP *scip, int signB, int signC, int sig
     int nconss = SCIPgetNOrigConss(scip);
     SCIP_Cons **conss = SCIPgetOrigConss(scip);
 
-    SCIP_Real *consCoefTemp;
-    SCIPallocBufferArray(scip, &consCoefTemp, nvars);
-    SCIP_Real *consCoef;
-    SCIPallocBufferArray(scip, &consCoef, nvars);
-    SCIP_Var **consVars;
-    SCIPallocBufferArray(scip, &consVars, nvars);
+    SCIP_Real *consCoefTemp = new SCIP_Real[nvars];
+    //SCIPallocBufferArray(scip, &consCoefTemp, nvars);
+    SCIP_Real *consCoef =new SCIP_Real[nvars];
+    //SCIPallocBufferArray(scip, &consCoef, nvars);
+    SCIP_Var **consVars = new SCIP_Var*[nvars];
+    //SCIPallocBufferArray(scip, &consVars, nvars);
 
     for(int i=0; i<nvars; ++i){
         varnameIndexMap[SCIPvarGetName(vars[i])] = i;
@@ -105,9 +105,12 @@ FeaturesCalculator::FeaturesCalculator(SCIP *scip, int signB, int signC, int sig
         }
     }
 
-    SCIPfreeBufferArray(scip, &consVars);
+    /*SCIPfreeBufferArray(scip, &consVars);
     SCIPfreeBufferArray(scip, &consCoef);
-    SCIPfreeBufferArray(scip, &consCoefTemp);
+    SCIPfreeBufferArray(scip, &consCoefTemp);*/
+    delete[] consVars;
+    delete[] consCoef;
+    delete[] consCoefTemp;
 
 }
 

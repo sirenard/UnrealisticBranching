@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.3)
 
 project(LEARNING)
 
-
+find_package(MPI REQUIRED)
+include_directories(${MPI_INCLUDE_PATH})
 
 if(TARGET SCIP::SCIP)
   # find package by SCIP PATH
@@ -26,6 +27,7 @@ add_executable(scip_learning
 
 target_link_libraries(scip_learning ${SCIP_LIBRARIES})
 target_link_libraries(scip_learning  dlib::dlib)
+target_link_libraries(scip_learning ${MPI_LIBRARIES})
 
 if(ZLIB)
     find_package(ZLIB)
@@ -34,11 +36,12 @@ if(ZLIB)
     endif()
 endif()
 
-find_package(MPI REQUIRED)
-include_directories(${MPI_INCLUDE_PATH})
 
-SET(CMAKE_CPP_COMPILER mpicxx)
-SET(CMAKE_CXX_COMPILER mpicxx)
+#SET(CMAKE_CPP_COMPILER mpiccc)
+#SET(CMAKE_CXX_COMPILER mpicxx)
+
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi -I/usr/lib/x86_64-linux-gnu/openmpi/include -pthread -L/usr/lib/x86_64-linux-gnu/openmpi/lib -lmpi_cxx -lmpi")
+#set(CMAKE_CPP_FLAGS "${CMAKE_CPP_FLAGS} -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi -I/usr/lib/x86_64-linux-gnu/openmpi/include -pthread -L/usr/lib/x86_64-linux-gnu/openmpi/lib -lmpi_cxx -lmpi")
 
 if( TARGET examples )
     add_dependencies( examples scip_learning )

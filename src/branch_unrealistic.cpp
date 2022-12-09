@@ -41,21 +41,25 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
 
     int* varScores = nullptr; // store every variable's realNnodes
-    if(dataWriter != nullptr && depth == 0)SCIP_CALL(SCIPallocBufferArray(scip, &varScores, nlpcands));
+    //if(dataWriter != nullptr && depth == 0)SCIP_CALL(SCIPallocBufferArray(scip, &varScores, nlpcands));
+    if(dataWriter != nullptr && depth == 0)varScores = new int[nlpcands];
 
     // an instruction already exists for the first branching (given by the parent)
     if(firstBranch!=nullptr){
+        assert(left<right);
         SCIP_CALL( SCIPbranchVarHole(scip, firstBranch, left, right, nullptr, nullptr) );
+        *result = SCIP_BRANCHED;
         firstBranch=nullptr;
 
-        *result = SCIP_BRANCHED;
+        /**result = SCIP_BRANCHED;
         SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
+        SCIP_CALL( SCIPsetRealParam(scip, "limits/time", 60));
         if(depth>=maxdepth){
             SCIP_CALL( Utils::configure_scip_instance(scip, false) );
             SCIP_CALL( SCIPsetRealParam(scip, "limits/time", leafTimeLimit));
         } else{
             SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
-        }
+        }*/
         return SCIP_OKAY;
     }
 
@@ -84,7 +88,8 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
         dataWriter->addNode(scip, children, nlpcands, varScores, lpcands, bestcand);
     }
 
-    if(dataWriter != nullptr && depth == 0)SCIPfreeBufferArray(scip, &varScores);
+    //if(dataWriter != nullptr && depth == 0)SCIPfreeBufferArray(scip, &varScores);
+    delete[] varScores;
     return SCIP_OKAY;
 }
 

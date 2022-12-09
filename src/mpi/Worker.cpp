@@ -6,13 +6,16 @@
 #include "../branch_unrealistic.h"
 #include "../Utils.h"
 #include <iostream>
+#include <scip/scipdefplugins.h>
+#include <algorithm>
 #include "Worker.h"
 
 Worker* Worker::instance = nullptr;
 Worker::Worker(unsigned int rank):
     rank(rank),
     directorRank(rank),
-    nWorkers(0){
+    nWorkers(0),
+    workers(nullptr){
 }
 
 void Worker::setInstance(Worker *node) {
@@ -21,10 +24,6 @@ void Worker::setInstance(Worker *node) {
 
 Worker *Worker::getInstance() {
     return instance;
-}
-
-const unsigned int Worker::getRank() const {
-    return rank;
 }
 
 bool Worker::isMaster() {
@@ -47,69 +46,73 @@ void Worker::work() {
 }
 
 void Worker::returnScore(int score) {
-    MPI_Send(&score, 1, MPI_INT, directorRank, 1, MPI_COMM_WORLD);
+    MPI_Send(&score, 1, MPI_INT, directorRank, SCORE_FLAG, MPI_COMM_WORLD);
 }
 
 void Worker::retrieveInstance() {
     int len;
     MPI_Bcast(&len, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    char* name =  new char[len+1];
+    //char* name =  new char[len+1];
+    name =  new char[len+1];
     MPI_Bcast(name, len, MPI_CHAR, 0, MPI_COMM_WORLD);
     name[len] = '\0';
 
     SCIPreadProb(scipmain, name, NULL);
-    delete[] name;
+    //delete[] name;
     MPI_Barrier(MPI_COMM_WORLD);
 }
 
 void Worker::createScipInstance() {
     Utils::create_scip_instance(&scipmain, true);
     //Utils::configure_slave_scip_instance(scipmain);
-    SCIPcreateProbBasic(scipmain, ("workerProb" + std::to_string(rank)).c_str());
+    //SCIPcreateProbBasic(scipmain, ("workerProb" + std::to_string(rank)).c_str());
 }
 
 SCIP *Worker::retrieveNode() {
     double leafTimeLimit;
-    MPI_Recv(&leafTimeLimit, 1, MPI_DOUBLE, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(&leafTimeLimit, 1, MPI_DOUBLE, directorRank, NODE_INFO_FLAG, MPI_COMM_WORLD, &status);
     int depth, maxdepth;
-    MPI_Recv(&depth, 1, MPI_INT, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-    MPI_Recv(&maxdepth, 1, MPI_INT, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(&depth, 1, MPI_INT, directorRank, NODE_INFO_FLAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(&maxdepth, 1, MPI_INT, directorRank, NODE_INFO_FLAG, MPI_COMM_WORLD, &status);
 
     int nodeLimit;
-    MPI_Recv(&nodeLimit, 1, MPI_INT, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(&nodeLimit, 1, MPI_INT, directorRank, NODE_INFO_FLAG, MPI_COMM_WORLD, &status);
 
     int n = SCIPgetNVars(scipmain);
-    SCIP_Real *lb;
-    SCIP_Real *ub;
-    SCIP_Real *bestSolVals;
-    SCIPallocBufferArray(scipmain, &lb, n);
+    SCIP_Real *lb=new SCIP_Real[n];
+    SCIP_Real *ub=new SCIP_Real[n];;
+    SCIP_Real *bestSolVals=new SCIP_Real[n];;
+    /*SCIPallocBufferArray(scipmain, &lb, n);
     SCIPallocBufferArray(scipmain, &ub, n);
-    SCIPallocBufferArray(scipmain, &bestSolVals, n);
+    SCIPallocBufferArray(scipmain, &bestSolVals, n);*/
     // get lower bounds
-    MPI_Recv(lb, n, MPI_DOUBLE, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(lb, n, MPI_DOUBLE, directorRank, NODE_INFO_FLAG, MPI_COMM_WORLD, &status);
 
     // get upper bounds
-    MPI_Recv(ub, n, MPI_DOUBLE, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(ub, n, MPI_DOUBLE, directorRank, NODE_INFO_FLAG, MPI_COMM_WORLD, &status);
 
     int firstBrchId;
-    MPI_Recv(&firstBrchId, 1, MPI_INT, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(&firstBrchId, 1, MPI_INT, directorRank, NODE_INFO_FLAG, MPI_COMM_WORLD, &status);
 
     double objlimit, left, right;
-    MPI_Recv(&objlimit, 1, MPI_DOUBLE, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-    MPI_Recv(bestSolVals, n, MPI_DOUBLE, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-    MPI_Recv(&left, 1, MPI_DOUBLE, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-    MPI_Recv(&right, 1, MPI_DOUBLE, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(&objlimit, 1, MPI_DOUBLE, directorRank, NODE_INFO_FLAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(bestSolVals, n, MPI_DOUBLE, directorRank, NODE_INFO_FLAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(&left, 1, MPI_DOUBLE, directorRank, NODE_INFO_FLAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(&right, 1, MPI_DOUBLE, directorRank, NODE_INFO_FLAG, MPI_COMM_WORLD, &status);
 
     int branchingMaxDepth;
-    MPI_Recv(&branchingMaxDepth, 1, MPI_INT, directorRank, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(&branchingMaxDepth, 1, MPI_INT, directorRank, NODE_INFO_FLAG, MPI_COMM_WORLD, &status);
 
     SCIP* res = createScipInstance(leafTimeLimit, depth, maxdepth, nodeLimit, n, lb, ub, firstBrchId, objlimit,
                                    bestSolVals, left, right, branchingMaxDepth);
 
 
-    SCIPfreeBufferArray(scipmain, &bestSolVals);
+    /*SCIPfreeBufferArray(scipmain, &bestSolVals);
     SCIPfreeBufferArray(scipmain, &ub);
-    SCIPfreeBufferArray(scipmain, &lb);
+    SCIPfreeBufferArray(scipmain, &lb);*/
+    delete[] bestSolVals;
+    delete[] ub;
+    delete[] lb;
     return res;
 }
 
@@ -120,12 +123,15 @@ SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth,
     SCIP *scip_copy=nullptr;
     SCIP_Bool valid;
     SCIPcreate(&scip_copy);
+
+    //SCIPcopy(scipmain, scip_copy, nullptr, nullptr, name, FALSE, FALSE, FALSE, TRUE, &valid);
+    //assert(valid == TRUE);
+
     SCIPenableDebugSol(scip_copy);
+    SCIPincludeDefaultPlugins(scip_copy);
 
-    SCIPcopy(scipmain, scip_copy, nullptr, nullptr, ("ub_subsolver" + std::to_string(rank)).c_str(), TRUE, TRUE, TRUE, TRUE, &valid);
-    assert(valid == TRUE);
 
-    SCIPcopyParamSettings(scipmain, scip_copy);
+    //SCIPcopyParamSettings(scipmain, scip_copy);
 
     auto *objbranchrule = new Branch_unrealistic(scip_copy, depth, maxdepth, leafTimeLimit);
 
@@ -134,18 +140,41 @@ SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth,
     SCIPsetLongintParam(scip_copy, "limits/nodes", nodeLimit);
 
     SCIPsetIntParam(scip_copy, "display/verblevel", 0);
+
+    if(depth == maxdepth){
+        SCIPsetIntParam(scip_copy, "branching/unrealistic/maxdepth", 0);
+    }
     // don't use heuristics on recursion levels
     SCIPsetHeuristics(scip_copy, SCIP_PARAMSETTING_OFF, TRUE);
     //SCIPsetRealParam(scip_copy,"limits/time",1e+20);
 
-    SCIP_VAR **vars = SCIPgetVars(scip_copy);
+    SCIPreadProb(scip_copy, name, nullptr);
+    SCIPtransformProb(scip_copy);
+    SCIPsetHeuristics(scip_copy, SCIP_PARAMSETTING_DEFAULT, TRUE);
+
+    SCIP_VAR **vars = new SCIP_VAR*[n];
+    memcpy(vars, SCIPgetVars(scip_copy), n*sizeof(SCIP_VAR*));
+    sortVarsArray(vars, n);
+    int x;
+
     // set lower bounds
     for(int i=0; i<n; ++i){
-        SCIPchgVarLb(scip_copy, vars[i], lb[i]);
-        SCIPchgVarUb(scip_copy, vars[i], ub[i]);
-        SCIPvarSetRemovable(vars[i], FALSE);
+        if((strcmp(SCIPvarGetName(vars[i]), "t_x99")==0 || strcmp(SCIPvarGetName(vars[i]), "x99")==0) && lb[i]>1){
+            int x=2;
+        }
+        //vars = SCIPgetVars(scip_copy);
+        //SCIPvarSetRemovable(vars[i], FALSE);
+        /*if(lb[i] == ub[i]){
+            SCIP_Bool fixed, infeasible;
+            SCIPfixVar(scip_copy, vars[i], ub[i], &infeasible, &fixed);
+            assert(fixed);*/
+        //} else {
+        SCIPchgVarLbGlobal(scip_copy, vars[i], lb[i]);
+        SCIPchgVarUbGlobal(scip_copy, vars[i], ub[i]);
+        //}
     }
 
+    assert(firstBrchId < n);
     objbranchrule->setFirstBranch(vars[firstBrchId], left, right);
     SCIPsetObjlimit(scip_copy, objlimit);
 
@@ -156,7 +185,8 @@ SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth,
     SCIPaddSol(scip_copy, sol, &stored);
     assert(stored);
 
-    SCIPsetIntParam(scip_copy, "branching/unrealistic/maxdepth", branchingMaxDepth);
+    //SCIPsetIntParam(scip_copy, "branching/unrealistic/maxdepth", branchingMaxDepth);
+    delete[] vars;
 
     return scip_copy;
 }
@@ -164,63 +194,79 @@ SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth,
 void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::vector<int> &bestcands, int &bestScore,
                            int depth,
                            int maxdepth, double leafTimeLimit, bool noNodeLimitation, int *varScores) {
-    int nUnusedWorkers = nWorkers - nlpcands;
-    int nWorkersForEach;
-    if(nUnusedWorkers > 0){
-        nWorkersForEach = std::ceil((float)nUnusedWorkers / nlpcands); //each worker can have  n sub workers
-        if(nWorkersForEach == 1)nWorkersForEach = 2; // only one subworker is useless
-    }
-    else nWorkersForEach = 0;
+
+    // Check if the worker range can be updated
+    /*int flag=0;
+    MPI_Iprobe( MPI_ANY_SOURCE, WORKER_RANGE_FLAG, MPI_COMM_WORLD, &flag, &status );
+    if(flag){
+        getWorkersRange();
+    }*/
 
     SCIP_Real objlimit;
     // get values of the best sol
     SCIP_Sol* bestSol = SCIPgetBestSol(scip);
+    //objlimit = SCIPgetObjlimit(scip);
+
     if(bestSol == NULL) {
         objlimit = SCIPgetObjlimit(scip);
     } else{
         objlimit = SCIPsolGetOrigObj(bestSol);
     }
 
-    //std::cout << "Work for " << rank << " with" << nWorkers << " workers" << std::endl;
+    //std::cout << rank << " working for " << directorRank << " with " << nWorkers << " workers" << std::endl;
+
+    unsigned minNumberWorker;
+    if(depth==maxdepth){
+        minNumberWorker = 1;
+    } else{
+        minNumberWorker = std::max(MIN_NUMBER_WORKER, (int)std::ceil(double(nWorkers)/nlpcands));
+    }
     if(nWorkers) {
-        int nFreeWorkers = nWorkers - nlpcands;
-        int firstFreeWorker = startWorkersRange + nlpcands;
         int *workerMap = new int[nWorkers]; // workermap[i]=j -> The i th worker works on candidate j
+        std::fill(workerMap, workerMap+nWorkers, -1);
         int nActiveWorkers = 0;
-        unsigned nextWorkerId = startWorkersRange;
 
         for (int i = 0; i < nlpcands; ++i) {
-            unsigned workerId = nextWorkerId;
-            int start = 0, end = 0;
+            unsigned workerRank;
+            unsigned n=minNumberWorker;
+            assert(n);
+            unsigned* subWorkers = findAvailableWorkers(n, i, workerMap);
             int flag=0;
-            MPI_Iprobe( MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status );
-            if(flag || nextWorkerId == endWorkersRange){ // an old worker is available or no more available worker
-                workerId = extractScore(lpcands, bestcands, depth, workerMap, bestScore, nullptr);
-                start = -1;
-                end = -1;
-
+            MPI_Iprobe( MPI_ANY_SOURCE, SCORE_FLAG, MPI_COMM_WORLD, &flag, &status );
+            if(flag || n==0) { // an old worker is available or no more available worker
+                workerRank = extractScore(lpcands, bestcands, depth, workerMap, bestScore, nullptr);
+                updateWork(workerRank, i, workerMap);
+                n = -1;
             } else{
                 nActiveWorkers++;
-                nextWorkerId++;
-                if (nFreeWorkers > 1 && depth != maxdepth) {
-                    start = firstFreeWorker;
-                    int nSelectedWorkers = std::min(nFreeWorkers, nWorkersForEach);
-                    end = start + nSelectedWorkers;
-                    nFreeWorkers -= nSelectedWorkers;
-                    firstFreeWorker += nSelectedWorkers;
-                }
+                workerRank = subWorkers[0];
             }
 
-            workerMap[workerId - startWorkersRange] = i;
+            if(n==-1){
+                std::cout << rank << " re-sending work to " << workerRank << std::endl;
+            } else{
+                std::cout << rank << " sending work to " << workerRank << ", n=" << n << "( ";
+                for(int h=0; h<n; ++h){
+                    std::cout << subWorkers[h] << ", ";
+                }
+                std::cout << ")" << std::endl;
+            }
 
             short instruction = CONTINUE_WORKING_FLAG;
-            MPI_Send(&instruction, 1, MPI_SHORT, workerId, 0, MPI_COMM_WORLD);
-            sendWorkersRange(workerId, start, end);
+            MPI_Send(&instruction, 1, MPI_SHORT, workerRank, INSTRUCTION_FLAG, MPI_COMM_WORLD);
+
+            if(n!=-1){
+                sendWorkersRange(workerRank, n==1?nullptr:subWorkers+1, n-1);
+            } else{
+                sendWorkersRange(workerRank, nullptr, -1);
+            }
+
             int nodelimit = -1;
             if(!noNodeLimitation && bestScore < INT_MAX && bestScore != -1){
                 nodelimit = bestScore + 1;
             }
-            sendNode(scip, workerId, nodelimit, lpcands[i], depth, maxdepth, objlimit, leafTimeLimit);
+            sendNode(scip, workerRank, nodelimit, lpcands[i], depth, maxdepth, objlimit, leafTimeLimit);
+            delete[] subWorkers;
         }
 
         for(int j=0; j<nActiveWorkers; ++j){
@@ -258,12 +304,14 @@ unsigned int
 Worker::extractScore(SCIP_VAR *const *lpcands, std::vector<int> &bestcands, int depth, const int *workerMap,
                      int &bestScore, int *varScores) const {
     int score, cand;
-    unsigned workerId;
+    unsigned workerRank;
     MPI_Status status;
 
-    MPI_Recv(&score, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-    workerId = status.MPI_SOURCE;
-    cand = workerMap[workerId - startWorkersRange];
+    MPI_Recv(&score, 1, MPI_INT, MPI_ANY_SOURCE, SCORE_FLAG, MPI_COMM_WORLD, &status);
+    workerRank = status.MPI_SOURCE;
+
+    unsigned workerIndex = findWorkerIndex(workerRank);
+    cand = workerMap[workerIndex];
 
     if(!(depth-1))std::cout << "Score of " << SCIPvarGetName(lpcands[cand]) <<": " << score << std::endl;
     if (score < bestScore || bestScore == -1) {
@@ -276,12 +324,16 @@ Worker::extractScore(SCIP_VAR *const *lpcands, std::vector<int> &bestcands, int 
 
     if(varScores)varScores[cand] = score;
 
-    return workerId;
+    return workerRank;
 }
 
 void Worker::broadcastInstance(const char *name) {
     // broadcast the instance name
     int len = strlen(name);
+
+    this->name =  new char[len+1];
+    memcpy(this->name, name, len*sizeof(char));
+    this->name[len] = '\0';
 
     MPI_Bcast(&len, 1, MPI_INT, rank, MPI_COMM_WORLD);
     MPI_Bcast((void*)name, len, MPI_CHAR, rank, MPI_COMM_WORLD);
@@ -291,36 +343,48 @@ void Worker::broadcastInstance(const char *name) {
 SCIP * Worker::sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_VAR *varbrch, int depth, int maxdepth,
                         double objlimit, double leafTimeLimit) {
     if(workerId != rank) {
-        MPI_Send(&leafTimeLimit, 1, MPI_DOUBLE, workerId, 1, MPI_COMM_WORLD);
-        MPI_Send(&depth, 1, MPI_INT, workerId, 1, MPI_COMM_WORLD);
-        MPI_Send(&maxdepth, 1, MPI_INT, workerId, 1, MPI_COMM_WORLD);
-        MPI_Send(&nodeLimit, 1, MPI_INT, workerId, 1, MPI_COMM_WORLD);
+        MPI_Send(&leafTimeLimit, 1, MPI_DOUBLE, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
+        MPI_Send(&depth, 1, MPI_INT, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
+        MPI_Send(&maxdepth, 1, MPI_INT, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
+        MPI_Send(&nodeLimit, 1, MPI_INT, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
     }
 
     int n = SCIPgetNVars(scip);
-    SCIP_VAR **vars = SCIPgetVars(scip);
-    SCIP_Real *lb;
-    SCIP_Real *ub;
-    SCIP_Real *bestSolVals;
-    SCIPallocBufferArray(scip, &ub, n);
+    SCIP_VAR **vars = new SCIP_VAR*[n];
+    memcpy(vars, SCIPgetVars(scip), n*sizeof(SCIP_VAR*));
+    sortVarsArray(vars, n);
+    SCIP_Real *lb=new SCIP_Real[n];;
+    SCIP_Real *ub=new SCIP_Real[n];;
+    SCIP_Real *bestSolVals=new SCIP_Real[n];;
+    /*SCIPallocBufferArray(scip, &ub, n);
     SCIPallocBufferArray(scip, &lb, n);
-    SCIPallocBufferArray(scip, &bestSolVals, n);
+    SCIPallocBufferArray(scip, &bestSolVals, n);*/
 
     // send lower bounds
     for(int i=0; i<n; ++i){
         //lb[i] = SCIPcomputeVarLbLocal(scip, vars[i]); // TODO: Or SCIPgetVarLbLocal?
         lb[i] = SCIPvarGetLbLocal(vars[i]); // TODO: Or SCIPgetVarLbLocal?
+        if((strcmp(SCIPvarGetName(vars[i]), "t_x99")==0) && lb[i]>1){
+            int x=2;
+        }
     }
-    if(workerId != rank)MPI_Send(lb, n, MPI_DOUBLE, workerId, 1, MPI_COMM_WORLD);
+    if(workerId != rank)MPI_Send(lb, n, MPI_DOUBLE, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
 
     // send upper bounds
     for(int i=0; i<n; ++i){
         //ub[i] = SCIPcomputeVarUbLocal(scip ,vars[i]);
         ub[i] = SCIPvarGetUbLocal(vars[i]);
     }
-    if(workerId != rank)MPI_Send(ub, n, MPI_DOUBLE, workerId, 1, MPI_COMM_WORLD);
+    if(workerId != rank)MPI_Send(ub, n, MPI_DOUBLE, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
 
-    int firstBrchId = SCIPvarGetProbindex(varbrch);
+    int firstBrchId=-1;
+    for(int i=0; i<n; ++i){
+        if(vars[i] == varbrch){
+            firstBrchId = i;
+            break;
+        }
+    }
+    //= SCIPvarGetProbindex(varbrch);
     assert(firstBrchId >= 0);
 
     SCIP_Sol* bestSol = SCIPgetBestSol(scip);
@@ -334,12 +398,12 @@ SCIP * Worker::sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_V
     SCIPgetIntParam(scip, "branching/unrealistic/maxdepth", &branchingMaxDepth);
 
     if(workerId != rank){
-        MPI_Send(&firstBrchId, 1, MPI_INT, workerId, 1, MPI_COMM_WORLD);
-        MPI_Send(&objlimit, 1, MPI_DOUBLE, workerId, 1, MPI_COMM_WORLD);
-        MPI_Send(bestSolVals, n, MPI_DOUBLE, workerId, 1, MPI_COMM_WORLD);
-        MPI_Send(&left, 1, MPI_DOUBLE, workerId, 1, MPI_COMM_WORLD);
-        MPI_Send(&right, 1, MPI_DOUBLE, workerId, 1, MPI_COMM_WORLD);
-        MPI_Send(&branchingMaxDepth, 1, MPI_INT, workerId, 1, MPI_COMM_WORLD);
+        MPI_Send(&firstBrchId, 1, MPI_INT, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
+        MPI_Send(&objlimit, 1, MPI_DOUBLE, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
+        MPI_Send(bestSolVals, n, MPI_DOUBLE, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
+        MPI_Send(&left, 1, MPI_DOUBLE, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
+        MPI_Send(&right, 1, MPI_DOUBLE, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
+        MPI_Send(&branchingMaxDepth, 1, MPI_INT, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
     }
 
 
@@ -349,30 +413,46 @@ SCIP * Worker::sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_V
                                  bestSolVals, left, right, branchingMaxDepth);
     }
 
-    SCIPfreeBufferArray(scip, &bestSolVals);
+    /*SCIPfreeBufferArray(scip, &bestSolVals);
     SCIPfreeBufferArray(scip, &lb);
-    SCIPfreeBufferArray(scip, &ub);
+    SCIPfreeBufferArray(scip, &ub);*/
+    delete[] bestSolVals;
+    delete[] lb;
+    delete[] ub;
+    delete[] vars;
 
     return res;
 }
 
 void Worker::setWorkersRange(int start, int end) {
-    startWorkersRange = start;
-    endWorkersRange = end;
-    nWorkers = endWorkersRange - startWorkersRange;
+    nWorkers = end-start;
+    workers = new unsigned[nWorkers];
+    for(int i=0; i<nWorkers; i++){
+        workers[i] = start+i;
+    }
 }
 
-void Worker::sendWorkersRange(unsigned int workerRank, int start, int end) {
-    int data[] = {start, end};
-    MPI_Send(data, 2, MPI_INT, workerRank, 1, MPI_COMM_WORLD);
+void Worker::sendWorkersRange(unsigned int workerRank, unsigned int *workersToSend, unsigned int n) {
+    MPI_Send(&n, 1, MPI_UNSIGNED, workerRank, WORKER_RANGE_FLAG, MPI_COMM_WORLD);
+    if(n!=0 && n!= -1){
+        assert(workersToSend!=nullptr);
+        MPI_Send(workersToSend, n, MPI_UNSIGNED, workerRank, WORKER_RANGE_FLAG, MPI_COMM_WORLD);
+    }
 }
 
 void Worker::getWorkersRange() {
-    int data[2];
-    MPI_Recv(data, 2, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    unsigned n;
+    MPI_Recv(&n, 1, MPI_UNSIGNED, MPI_ANY_SOURCE, WORKER_RANGE_FLAG, MPI_COMM_WORLD, &status);
     directorRank = status.MPI_SOURCE;
-    if(data[0] >= 0 && data[1] >= 0) {
-        setWorkersRange(data[0], data[1]);
+
+    if(n != -1){ // if n==-1: The worker keeps its subWorkers
+        delete[] workers;
+        workers = nullptr;
+        nWorkers = n;
+        if(n!=0){
+            workers = new unsigned[nWorkers];
+            MPI_Recv(workers, nWorkers, MPI_UNSIGNED, directorRank, WORKER_RANGE_FLAG, MPI_COMM_WORLD, &status);
+        }
     }
 }
 
@@ -392,24 +472,76 @@ int Worker::getScore(SCIP *scip) {
 }
 
 void Worker::setScipInstance(SCIP *scip) {
-    SCIP_Bool valid;
-    SCIPcreate(&scipmain);
-
-    SCIPcopy(scip, scipmain, nullptr, nullptr, NULL, FALSE, FALSE, FALSE, FALSE, &valid);
+    createScipInstance();
+    SCIPreadProb(scipmain, SCIPgetProbName(scip), NULL);
 
     broadcastInstance(SCIPgetProbName(scip));
 }
 
 void Worker::broadcastEnd() {
     short instruction = END_SOLVING_FLAG;
-    for(int workerId = startWorkersRange; workerId < endWorkersRange; workerId++){
-        MPI_Send(&instruction, 1, MPI_SHORT, workerId, 0, MPI_COMM_WORLD);
+    for(int i=0; i<nWorkers; ++i){
+        MPI_Send(&instruction, 1, MPI_SHORT, workers[i], INSTRUCTION_FLAG, MPI_COMM_WORLD);
     }
     SCIPfree(&scipmain);
 }
 
 bool Worker::isFinished() {
     short instruction;
-    MPI_Recv(&instruction, 1, MPI_SHORT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(&instruction, 1, MPI_SHORT, MPI_ANY_SOURCE, INSTRUCTION_FLAG, MPI_COMM_WORLD, &status);
     return instruction==END_SOLVING_FLAG;
+}
+
+Worker::~Worker() {
+    delete[] workers;
+    delete[] name;
+}
+
+unsigned *Worker::findAvailableWorkers(unsigned int &n, int task, int *workerMap) {
+    unsigned* res = new unsigned[n];
+    unsigned nFound=0;
+    for(int i=0; i<nWorkers; ++i){
+        if(workerMap[i] == -1){
+            workerMap[i]=task;
+            res[nFound++]=workers[i];
+            if(nFound==n)break;
+        }
+    }
+
+    if(nFound<n){
+        n = nFound;
+    }
+    return res;
+}
+
+void Worker::freeWorkers(int task, int *workerMap) {
+    for(int i=0; i<nWorkers; ++i){
+        if(workerMap[i] == task){
+            workerMap[i] = -1;
+        }
+    }
+}
+
+unsigned Worker::findWorkerIndex(unsigned int workerRank) const {
+    for(int i=0; i<nWorkers; ++i){
+        if(workers[i] == workerRank){
+            return i;
+        }
+    }
+    return nWorkers;
+}
+
+void Worker::updateWork(unsigned int workerRank, int task, int *workerMap) {
+    for(int i=0; i<nWorkers; ++i){
+        if(workers[i] == workerRank){
+            workerMap[i] = task;
+        }
+    }
+}
+
+void Worker::sortVarsArray(SCIP_VAR **vars, int n) {
+    struct {
+        bool operator()(SCIP_VAR* a, SCIP_VAR* b) const { return SCIPvarGetName(a) < SCIPvarGetName(b); }
+    } customLess;
+    std::sort(vars, vars+n, customLess);
 }

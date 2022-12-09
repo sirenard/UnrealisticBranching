@@ -7,6 +7,12 @@
 
 #define CONTINUE_WORKING_FLAG 0
 #define END_SOLVING_FLAG 1
+#define INSTRUCTION_FLAG 2
+#define SCORE_FLAG 3
+#define NODE_INFO_FLAG 4
+#define WORKER_RANGE_FLAG 5
+
+#define MIN_NUMBER_WORKER 10
 
 #include <vector>
 #include <mpi.h>
@@ -20,16 +26,37 @@ class Worker {
     void retrieveInstance();
 
     // a worker can use the workers in the range [startWorkersRange, endWorkersRange]
-    unsigned startWorkersRange;
-    unsigned endWorkersRange;
     unsigned nWorkers;
+    unsigned* workers;
     unsigned directorRank;
     const unsigned rank;
+
+    char* name;
 
     MPI_Status status;
     SCIP* scipmain;
 
     bool isFinished();
+
+    /**
+     * return an array of at most n free workers to work on task j
+     * @param n
+     * @param task
+     * @return
+     */
+    unsigned* findAvailableWorkers(unsigned& n, int task, int *workerMap);
+    void updateWork(unsigned workerRank, int task, int* workerMap);
+
+    void freeWorkers(int task, int* workerMap);
+
+    /**
+     * Find the index i s.t. workers[i] = workerRank
+     * @param workerRank
+     * @return
+     */
+    unsigned findWorkerIndex(unsigned workerRank) const;
+
+    static void sortVarsArray(SCIP_VAR** vars, int n);
 
 public:
     explicit Worker(unsigned rank);
@@ -37,9 +64,9 @@ public:
     static Worker* getInstance();
     bool isMaster();
 
-    const unsigned int getRank() const;
-
     void work();
+
+    virtual ~Worker();
 
     void setWorkersRange(int start, int end);
 
@@ -56,7 +83,7 @@ public:
     SCIP *
     sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_VAR *varbrch, int depth, int maxdepth, double objlimit, double leafTimeLimit);
 
-    void sendWorkersRange(unsigned int workerRank, int start, int end);
+    void sendWorkersRange(unsigned int workerRank, unsigned int *workersToSend, unsigned int n);
 
     void getWorkersRange();
 
