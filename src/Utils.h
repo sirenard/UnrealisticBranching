@@ -12,8 +12,8 @@
 class Utils {
 public:
     static SCIP_Retcode create_scip_instance(SCIP** scipp, bool addBranchScheme=true);
-    static SCIP_Retcode configure_scip_instance(SCIP* scip, bool addBranchScheme);
-    static SCIP_Retcode configure_slave_scip_instance(SCIP* scip);
+    static SCIP_Retcode configure_scip_instance(SCIP *scip, bool addBranchScheme);
+    static SCIP_Retcode remove_handlers(SCIP *scip);
 };
 
 

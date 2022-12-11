@@ -142,6 +142,16 @@ SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth,
     SCIPincludeDefaultPlugins(scip_copy);
     SCIPenableDebugSol(scip_copy);
 
+    auto *objbranchrule = new Branch_unrealistic(scip_copy, depth, maxdepth, leafTimeLimit);
+
+    SCIPincludeObjBranchrule(scip_copy, objbranchrule, TRUE);
+    Utils::configure_scip_instance(scip_copy, true);
+    SCIPsetLongintParam(scip_copy, "limits/nodes", nodeLimit);
+
+    if(depth < maxdepth){
+        Utils::remove_handlers(scip_copy);
+    }
+
     SCIPcreateProbBasic(scip_copy, "prob");
 
     SCIP_Var** vars = new SCIP_Var*[n];
@@ -154,34 +164,41 @@ SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth,
 
     SCIP_Var** consVars = new SCIP_Var*[n];
     for(int j=0; j<m; ++j){
+        int countNullCoef=0;
+        double* coef = new double[consInfo[j].nVar];
         for(int i = 0; i < consInfo[j].nVar; ++i){
-            int varNumber = consvarIndexes[j][i];
-            consVars[i] = vars[varNumber];
+            if(consvarCoefs[j][i] != 0){
+                int varNumber = consvarIndexes[j][i];
+                consVars[i-countNullCoef] = vars[varNumber];
+                coef[i-countNullCoef] = consvarCoefs[j][i];
+            } else{
+                countNullCoef++;
+            }
+
         }
 
-        SCIP_CONS *cons;
-        SCIPcreateConsBasicLinear(
-                scip_copy,
-                &cons,
-                (std::to_string(j)+"cons").c_str(),
-                consInfo[j].nVar,
-                consVars,
-                consvarCoefs[j],
-                consInfo[j].lhs,
-                consInfo[j].rhs
-        );
+        if(consInfo[j].nVar-countNullCoef > 0) {
+            SCIP_CONS *cons;
+            SCIPcreateConsBasicLinear(
+                    scip_copy,
+                    &cons,
+                    (std::to_string(j) + "cons").c_str(),
+                    consInfo[j].nVar - countNullCoef,
+                    consVars,
+                    coef,
+                    consInfo[j].lhs,
+                    consInfo[j].rhs
+            );
 
-        SCIPaddCons(scip_copy, cons);
-        SCIPreleaseCons(scip_copy, &cons);
+            SCIPaddCons(scip_copy, cons);
+            SCIPreleaseCons(scip_copy, &cons);
+        }
+
+        delete[] coef;
     }
     delete[] consVars;
 
 
-    auto *objbranchrule = new Branch_unrealistic(scip_copy, depth, maxdepth, leafTimeLimit);
-
-    SCIPincludeObjBranchrule(scip_copy, objbranchrule, TRUE);
-    Utils::configure_scip_instance(scip_copy, true);
-    SCIPsetLongintParam(scip_copy, "limits/nodes", nodeLimit);
 
     SCIPsetIntParam(scip_copy, "display/verblevel", 0);
 

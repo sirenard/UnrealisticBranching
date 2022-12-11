@@ -121,6 +121,7 @@ SCIP_DECL_BRANCHINIT(Branch_unrealistic::scip_init){
     SCIP_CALL( scip::ObjBranchrule::scip_init(scip, branchrule) );
     Worker *worker = Worker::getInstance();
     if(worker->isMaster() && depth==0){
+        Utils::remove_handlers(scip);
         worker->setScipInstance(scip);
     }
     return SCIP_OKAY;
