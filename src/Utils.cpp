@@ -54,7 +54,7 @@ SCIP_Retcode Utils::create_scip_instance(SCIP** scipp, bool addBranchScheme) {
             objbranchrule->getLeafTimeLimitPtr(),
             FALSE,
             120,
-            -1,
+            0,
             1e+20,
             NULL,
             NULL
@@ -82,13 +82,14 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
 
     /* for column generation instances, disable restarts */
     SCIP_CALL(SCIPsetIntParam(scip, "presolving/maxrestarts", 0));
+    SCIP_CALL(SCIPsetIntParam(scip, "presolving/maxrounds", 0));
     SCIP_CALL(SCIPsetIntParam(scip, "limits/restarts", 0));
 
     /* turn off all separation algorithms */
     SCIP_CALL(SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE));
     SCIP_CALL(SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE));
 
-    //SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+    SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
 
     //SCIP_CALL( SCIPsetIntParam(scip,"nodeselection/random/stdpriority",900000) );
     //SCIP_CALL( SCIPsetIntParam(scip,"nodeselection/dfs/stdpriority",900000) );
@@ -104,23 +105,9 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
     SCIP_CALL(SCIPsetIntParam(scip, "separating/maxruns", 0));
     SCIP_CALL(SCIPsetIntParam(scip, "pricing/maxvars", 1));
     SCIP_CALL(SCIPsetIntParam(scip, "pricing/maxvarsroot", 1));
-    SCIP_CALL(SCIPsetIntParam(scip, "constraints/bounddisjunction/propfreq", -1));
 
     SCIP_CALL(SCIPsetBoolParam(scip, "benders/copybenders", FALSE));
     SCIP_CALL(SCIPsetBoolParam(scip, "benders/cutlpsol", FALSE));
-
-    SCIP_CALL(SCIPsetBoolParam(scip, "constraints/disableenfops", FALSE));
-
-    for(const char *const hdlrName:{"linear", "integral", "SOS1", "SOS2", "and", "benders", "benderslp", "bounddisjunction", "cardinality", "components", "conjunction", "countsols", "cumulative", "disjunction", "indicator", "knapsack", "linking", "logicor", "nonlinear", "or", "orbisack", "orbitope", "pseudoboolean", "setppc", "superindicator", "symresack", "varbound", "xor"}){
-    //for(const std::string hdlrName:{"SOS1", "SOS2", "and", "benders", "benderslp", "bounddisjunction", "cardinality", "components", "conjunction", "countsols", "cumulative", "disjunction", "indicator", "knapsack", "linking", "logicor", "nonlinear", "or", "orbisack", "orbitope", "pseudoboolean", "setppc", "symresack", "varbound", "xor"}){
-        SCIP_CALL(SCIPsetIntParam(scip, (std::string("constraints/")+hdlrName+"/propfreq").c_str(), -1));
-        SCIP_CALL(SCIPsetIntParam(scip, (std::string("constraints/")+hdlrName+"/sepafreq").c_str(), -1));
-        SCIP_CALL(SCIPsetIntParam(scip, (std::string("constraints/")+hdlrName+"/maxprerounds").c_str(), 0));
-        SCIP_CALL(SCIPsetIntParam(scip, (std::string("constraints/")+hdlrName+"/eagerfreq").c_str(), -1));
-        SCIP_CALL(SCIPsetBoolParam(scip, (std::string("constraints/")+hdlrName+"/delayprop").c_str(), TRUE));
-        SCIP_CALL(SCIPsetBoolParam(scip, (std::string("constraints/")+hdlrName+"/delaysepa").c_str(), TRUE));
-
-    }
     return SCIP_OKAY;
 }
 

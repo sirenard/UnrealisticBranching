@@ -17,9 +17,6 @@
 #define 	BRANCHRULE_MAXDEPTH   -1
 #define 	BRANCHRULE_MAXBOUNDDIST   1.0
 
-Branch_unrealistic::Branch_unrealistic(SCIP *scip, int depth, int maxdepth, double leafTimeLimit) : ObjBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
-                                                                   BRANCHRULE_MAXBOUNDDIST), depth(depth), maxdepth(maxdepth), firstBranch(nullptr), leafTimeLimit(leafTimeLimit){}
-
 Branch_unrealistic::Branch_unrealistic(SCIP *scip, int maxdepth, double leafTimeLimit) : ObjBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
                                                                                             BRANCHRULE_MAXBOUNDDIST), depth(0), maxdepth(maxdepth), firstBranch(nullptr), leafTimeLimit(leafTimeLimit){}
 
@@ -47,13 +44,15 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
     // an instruction already exists for the first branching (given by the parent)
     if(firstBranch!=nullptr){
         assert(left<right);
-        SCIP_CALL( SCIPbranchVarHole(scip, firstBranch, left, right, nullptr, nullptr) );
+
+        //SCIP_CALL( SCIPbranchVar(scip, lpcands[0], NULL, NULL, NULL) );
+        //SCIP_CALL( SCIPbranchVarHole(scip, firstBranch, left, right, nullptr, nullptr) );
+        assert(SCIPvarGetLbLocal(firstBranch) != SCIPvarGetUbLocal(firstBranch));
+        SCIP_CALL( SCIPbranchVarVal(scip, SCIPvarGetProbvar(firstBranch), left+0.1, nullptr, nullptr, nullptr));
         *result = SCIP_BRANCHED;
         firstBranch=nullptr;
-        SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
-        if(depth>=maxdepth){
-            SCIP_CALL( SCIPsetRealParam(scip, "limits/time", leafTimeLimit));
-        }
+        //SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
+
 
         /**result = SCIP_BRANCHED;
         SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
@@ -117,27 +116,15 @@ double *Branch_unrealistic::getLeafTimeLimitPtr() {
     return &leafTimeLimit;
 }
 
-SCIP_DECL_BRANCHINIT(Branch_unrealistic::scip_init){
-    SCIP_CALL( scip::ObjBranchrule::scip_init(scip, branchrule) );
+
+SCIP_DECL_BRANCHEXIT(Branch_unrealistic::scip_exit){
     Worker *worker = Worker::getInstance();
     if(worker->isMaster() && depth==0){
-        Utils::remove_handlers(scip);
-        worker->setScipInstance(scip);
+        worker->broadcastEnd();
     }
     return SCIP_OKAY;
 }
 
-SCIP_DECL_BRANCHEXIT(Branch_unrealistic::scip_exit){
-    SCIP_CALL( scip::ObjBranchrule::scip_init(scip, branchrule) );
-    Worker *worker = Worker::getInstance();
-    if(worker->isMaster() && depth==0){
-        worker->broadcastEnd();
-
-        SCIP_Var** vars = SCIPgetVars(scip);
-        int n = SCIPgetNVars(scip);
-        for(int i=0; i<n; ++i){
-            SCIPvarSetRemovable(vars[i], FALSE);
-        }
-    }
-    return SCIP_OKAY;
+void Branch_unrealistic::setDepth(int depth) {
+    Branch_unrealistic::depth = depth;
 }

@@ -18,18 +18,14 @@
 class Branch_unrealistic: public scip::ObjBranchrule {
 private:
     static DatasetWriter *dataWriter;
-    int depth, maxdepth;
+    int depth;
+    int maxdepth;
     SCIP_Var* firstBranch;
     double leafTimeLimit;
     double left, right;
 
     SCIP_DECL_BRANCHEXECLP(scip_execlp) override;
-
-    SCIP_DECL_BRANCHINIT(scip_init) override;
-
     SCIP_DECL_BRANCHEXIT(scip_exit) override;
-
-
 public:
     explicit Branch_unrealistic(SCIP *scip, int maxdepth=1, double leafTimeLimit=-1);
     int* getMaxDepthPtr();
@@ -40,7 +36,8 @@ public:
 
     double *getLeafTimeLimitPtr();
 
-    Branch_unrealistic(SCIP *scip, int depth, int maxdepth, double leafTimeLimit);
+    void setDepth(int depth);
+
 };
 
 

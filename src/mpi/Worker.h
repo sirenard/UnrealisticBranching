@@ -23,31 +23,13 @@ class Worker {
 
     void returnScore(int score);
 
-    void retrieveInstance();
-
     // a worker can use the workers in the range [startWorkersRange, endWorkersRange]
     unsigned nWorkers;
     unsigned* workers;
     unsigned directorRank;
     const unsigned rank;
 
-    char* name;
-
     MPI_Status status;
-    SCIP* scipmain;
-
-    struct VarInfo{
-        SCIP_Vartype type;
-        double lb;
-        double ub;
-        double obj;
-    };
-
-    struct ConsInfo{
-        double lhs;
-        double rhs;
-        int nVar;
-    };
 
     bool isFinished();
 
@@ -84,15 +66,12 @@ public:
 
     void setWorkersRange(int start, int end);
 
-    void createScipInstance();
-
     SCIP *retrieveNode();
 
     void
     computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::vector<int> &bestcands, int &bestScore, int depth,
                   int maxdepth, double leafTimeLimit, bool noNodeLimitation, int *varScores);
 
-    void broadcastInstance(const char *name);
 
     SCIP *
     sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_VAR *varbrch, int depth, int maxdepth, double objlimit, double leafTimeLimit);
@@ -102,13 +81,11 @@ public:
     void getWorkersRange();
 
     SCIP *
-    createScipInstance(double leafTimeLimit, int depth, int maxdepth, int nodeLimit, int n, int m, int firstBrchId,
-                       double left, double right, double objlimit, VarInfo *varInfo, ConsInfo *consInfo,
-                       int **consvarIndexes, double **consvarCoefs, int branchingMaxDepth, double *bestSolVals);
+    createScipInstance(double leafTimeLimit, int depth, int maxdepth, int nodeLimit, int firstBrchId, double left,
+                       double right, double objlimit, int branchingMaxDepth, double *bestSolVals,
+                       const char *filename);
 
     int getScore(SCIP *scip);
-
-    void setScipInstance(SCIP *scip);
 
     unsigned int
     extractScore(SCIP_VAR *const *lpcands, std::vector<int> &bestcands, int depth, const int *workerMap,

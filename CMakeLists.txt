@@ -36,12 +36,10 @@ if(ZLIB)
     endif()
 endif()
 
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
-#SET(CMAKE_CPP_COMPILER mpiccc)
-#SET(CMAKE_CXX_COMPILER mpicxx)
-
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi -I/usr/lib/x86_64-linux-gnu/openmpi/include -pthread -L/usr/lib/x86_64-linux-gnu/openmpi/lib -lmpi_cxx -lmpi")
-#set(CMAKE_CPP_FLAGS "${CMAKE_CPP_FLAGS} -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi -I/usr/lib/x86_64-linux-gnu/openmpi/include -pthread -L/usr/lib/x86_64-linux-gnu/openmpi/lib -lmpi_cxx -lmpi")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+set(CMAKE_CPP_FLAGS "${CMAKE_CPP_FLAGS} -Wall")
 
 if( TARGET examples )
     add_dependencies( examples scip_learning )
