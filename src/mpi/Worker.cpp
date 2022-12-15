@@ -9,6 +9,7 @@
 #include <scip/scipdefplugins.h>
 #include <algorithm>
 #include <scip/cons.h>
+#include <filesystem> //C++ 17
 #include "Worker.h"
 
 Worker* Worker::instance = nullptr;
@@ -16,7 +17,16 @@ Worker::Worker(unsigned int rank):
     rank(rank),
     directorRank(rank),
     nWorkers(0),
-    workers(nullptr){
+    workers(nullptr),
+    count(0){
+    int tmp=rank;
+    prefix = new char[PREFIX_SIZE+1];
+    prefix[PREFIX_SIZE] = '\0';
+    for(int i=0; i<PREFIX_SIZE; i++){
+        prefix[i] = 'A' + tmp%10;
+        tmp/=10;
+    }
+    std::cout << prefix << std::endl;
 }
 
 void Worker::setInstance(Worker *node) {
@@ -335,25 +345,26 @@ SCIP * Worker::sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_V
 
     }
 
-    char* directory = std::getenv("TMPDIR");
-    char* filename = tempnam(directory, NULL);
-    SCIPwriteMIP(scip, filename, TRUE, TRUE, FALSE);
-    int length = std::strlen(filename);
+    std::string filename = std::string(TMP_DIR) + "/" + prefix + std::to_string(count++);
+    //char* filename = TMP_DIR + ;
+    //std::cout << TMP_DIR << " " << filename << std::endl;
+    SCIPwriteMIP(scip, filename.c_str(), TRUE, TRUE, FALSE);
+    int length = filename.length();
 
     if(workerId != rank) {
         MPI_Send(&length, 1, MPI_INT, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
-        MPI_Send(filename, length, MPI_CHAR, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
+        MPI_Send(filename.c_str(), length, MPI_CHAR, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
     }
 
     SCIP* res = nullptr;
     if(workerId == rank){
         res = createScipInstance(leafTimeLimit, depth, maxdepth, nodeLimit, firstBrchId, left, right, objlimit,
                                  branchingMaxDepth, bestSolVals,
-                                 filename);
+                                 filename.c_str());
     }
 
     delete[] vars;
-    delete[] filename;
+    //delete[] filename;
     return res;
 }
 
@@ -421,6 +432,7 @@ bool Worker::isFinished() {
 
 Worker::~Worker() {
     delete[] workers;
+    delete[] prefix;
 }
 
 unsigned *Worker::findAvailableWorkers(unsigned int &n, int task, int *workerMap) {

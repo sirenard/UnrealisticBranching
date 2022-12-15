@@ -12,6 +12,13 @@ else()
   find_package(SCIP REQUIRED)
 endif()
 
+if (NOT TMP_DIR)
+    add_definitions( -DTMP_DIR="/tmp")
+else()
+    add_definitions( -DTMP_DIR="${TMP_DIR}")
+    message("TMP_DIR: ${TMP_DIR}")
+endif()
+
 #set(DLIB_PATH /home/simon/Téléchargements/dlib-19.24)
 find_package(dlib REQUIRED)
 #include_directories(${DLIB_PATH})

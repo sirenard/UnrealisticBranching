@@ -14,7 +14,7 @@
 #define UPDATE_WORKER_RANGE_FLAG 6
 
 #define MIN_NUMBER_WORKER 10
-
+#define PREFIX_SIZE 4
 #include <vector>
 #include <mpi.h>
 #include <scip/scip.h>
@@ -29,6 +29,10 @@ class Worker {
     unsigned* workers;
     unsigned directorRank;
     const unsigned rank;
+
+    char *prefix;
+    int count;
+
 
     MPI_Status status;
 
