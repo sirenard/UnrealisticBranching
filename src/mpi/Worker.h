@@ -11,6 +11,7 @@
 #define SCORE_FLAG 3
 #define NODE_INFO_FLAG 4
 #define WORKER_RANGE_FLAG 5
+#define UPDATE_WORKER_RANGE_FLAG 6
 
 #define MIN_NUMBER_WORKER 10
 
@@ -42,7 +43,7 @@ class Worker {
     unsigned* findAvailableWorkers(unsigned& n, int task, int *workerMap);
     void updateWork(unsigned workerRank, int task, int* workerMap);
 
-    void transferWorkers(int fromTask, int *workerMap, int n);
+    void transferWorkers(int fromTask, int *workerMap);
 
     /**
      * Find the index i s.t. workers[i] = workerRank
@@ -76,9 +77,9 @@ public:
     SCIP *
     sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_VAR *varbrch, int depth, int maxdepth, double objlimit, double leafTimeLimit);
 
-    void sendWorkersRange(unsigned int workerRank, unsigned int *workersToSend, unsigned int n);
+    void sendWorkersRange(unsigned int workerRank, unsigned int *workersToSend, unsigned int n, int flag=WORKER_RANGE_FLAG);
 
-    void getWorkersRange();
+    void getWorkersRange(int flag=WORKER_RANGE_FLAG);
 
     SCIP *
     createScipInstance(double leafTimeLimit, int depth, int maxdepth, int nodeLimit, int firstBrchId, double left,
@@ -92,6 +93,8 @@ public:
                  int &bestScore, int *varScores) const;
 
     void broadcastEnd();
+
+    void checkForNewWorkers();
 };
 
 

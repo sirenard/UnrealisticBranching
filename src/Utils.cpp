@@ -84,12 +84,17 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
     SCIP_CALL(SCIPsetIntParam(scip, "presolving/maxrestarts", 0));
     SCIP_CALL(SCIPsetIntParam(scip, "presolving/maxrounds", 0));
     SCIP_CALL(SCIPsetIntParam(scip, "limits/restarts", 0));
+    SCIP_CALL( SCIPsetBoolParam(scip, "lp/presolving", FALSE) );
+    //SCIP_CALL(SCIPsetIntParam(scip, "lp/solutionpolishing", 0));
+    //SCIP_CALL(SCIPsetIntParam(scip, "lp/scaling", 0));
+
+
 
     /* turn off all separation algorithms */
     SCIP_CALL(SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE));
     SCIP_CALL(SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE));
 
-    SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+    //SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
 
     //SCIP_CALL( SCIPsetIntParam(scip,"nodeselection/random/stdpriority",900000) );
     //SCIP_CALL( SCIPsetIntParam(scip,"nodeselection/dfs/stdpriority",900000) );

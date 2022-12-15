@@ -47,11 +47,11 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
         //SCIP_CALL( SCIPbranchVar(scip, lpcands[0], NULL, NULL, NULL) );
         //SCIP_CALL( SCIPbranchVarHole(scip, firstBranch, left, right, nullptr, nullptr) );
-        assert(SCIPvarGetLbLocal(firstBranch) != SCIPvarGetUbLocal(firstBranch));
+        //assert(SCIPvarGetLbLocal(firstBranch) != SCIPvarGetUbLocal(firstBranch));
         SCIP_CALL( SCIPbranchVarVal(scip, SCIPvarGetProbvar(firstBranch), left+0.1, nullptr, nullptr, nullptr));
         *result = SCIP_BRANCHED;
         firstBranch=nullptr;
-        //SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
+        SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
 
 
         /**result = SCIP_BRANCHED;

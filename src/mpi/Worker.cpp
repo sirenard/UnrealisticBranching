@@ -33,6 +33,7 @@ bool Worker::isMaster() {
 
 void Worker::work() {
     while (!isFinished()) {
+        checkForNewWorkers(); // just to remove the buffer
         getWorkersRange();
         SCIP *scip_copy = retrieveNode();
         SCIPsolve(scip_copy);
@@ -148,20 +149,11 @@ SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth,
 void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::vector<int> &bestcands, int &bestScore,
                            int depth,
                            int maxdepth, double leafTimeLimit, bool noNodeLimitation, int *varScores) {
-
-    // Check if the worker range can be updated
-    /*int flag=0;
-    MPI_Iprobe( MPI_ANY_SOURCE, WORKER_RANGE_FLAG, MPI_COMM_WORLD, &flag, &status );
-    if(flag){
-        std::cout << "Augment from " << nWorkers << " to ";
-        getWorkersRange();
-        std::cout << nWorkers << std::endl;
-    }*/
+    checkForNewWorkers();
 
     SCIP_Real objlimit;
     // get values of the best sol
     SCIP_Sol* bestSol = SCIPgetBestSol(scip);
-    objlimit = SCIPgetObjlimit(scip);
 
     if(bestSol == NULL) {
         objlimit = SCIPgetObjlimit(scip);
@@ -198,21 +190,22 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
                 workerRank = subWorkers[0];
             }
 
-            if(n==-1){
-                //std::cout << rank << " re-sending work to " << workerRank << std::endl;
-            } else{
-                //std::cout << rank << " sending work to " << workerRank << ", n=" << n << "( ";
-                for(int h=0; h<n; ++h){
-                    //std::cout << subWorkers[h] << ", ";
+            if(depth< maxdepth)
+                if(n==-1){
+                    //std::cout << rank << " re-sending work to " << workerRank << std::endl;
+                } else{
+                    //std::cout << rank << " sending work to " << workerRank << ", n=" << n << "( ";
+                    for(int h=0; h<n; ++h){
+                        //std::cout << subWorkers[h] << ", ";
+                    }
+                    //std::cout << ")" << std::endl;
                 }
-                //std::cout << ")" << std::endl;
-            }
 
             short instruction = CONTINUE_WORKING_FLAG;
             MPI_Send(&instruction, 1, MPI_SHORT, workerRank, INSTRUCTION_FLAG, MPI_COMM_WORLD);
 
             if(n!=-1){
-                sendWorkersRange(workerRank, n==1?nullptr:subWorkers+1, n-1);
+                sendWorkersRange(workerRank, n == 1 ? nullptr : subWorkers + 1, n - 1);
             } else{
                 sendWorkersRange(workerRank, nullptr, -1);
             }
@@ -228,7 +221,9 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
         for(int j=0; j<nActiveWorkers; ++j){
             int workerRank = extractScore(lpcands, bestcands, depth, workerMap, bestScore, varScores);
             int task = workerMap[workerRank];
-            //freeWorkers(task, workerMap);
+            if(depth<maxdepth){
+                //transferWorkers(task, workerMap);
+            }
         }
 
         delete[] workerMap;
@@ -255,6 +250,20 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
             if(varScores)varScores[i] = score;
             SCIPfree(&scip_copy);
         }
+    }
+}
+
+void Worker::checkForNewWorkers() {// Check if the worker range can be updated
+    int flag=0;
+    MPI_Iprobe(MPI_ANY_SOURCE, UPDATE_WORKER_RANGE_FLAG, MPI_COMM_WORLD, &flag, &status);
+    if(flag){
+        std::cout << "Augment from " << nWorkers << " to ";
+        getWorkersRange(UPDATE_WORKER_RANGE_FLAG);
+        std::cout << nWorkers << " (";
+        for(int h=0; h < nWorkers; ++h){
+            std::cout << workers[h] << ", ";
+        }
+        std::cout << ")" << std::endl;
     }
 }
 
@@ -326,8 +335,8 @@ SCIP * Worker::sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_V
 
     }
 
-    char* filename = new char[L_tmpnam];
-    std::tmpnam(filename);
+    char* directory = std::getenv("TMPDIR");
+    char* filename = tempnam(directory, NULL);
     SCIPwriteMIP(scip, filename, TRUE, TRUE, FALSE);
     int length = std::strlen(filename);
 
@@ -356,17 +365,17 @@ void Worker::setWorkersRange(int start, int end) {
     }
 }
 
-void Worker::sendWorkersRange(unsigned int workerRank, unsigned int *workersToSend, unsigned int n) {
-    MPI_Send(&n, 1, MPI_UNSIGNED, workerRank, WORKER_RANGE_FLAG, MPI_COMM_WORLD);
+void Worker::sendWorkersRange(unsigned int workerRank, unsigned int *workersToSend, unsigned int n, int flag) {
+    MPI_Send(&n, 1, MPI_UNSIGNED, workerRank, flag, MPI_COMM_WORLD);
     if(n!=0 && n!= -1){
         assert(workersToSend!=nullptr);
-        MPI_Send(workersToSend, n, MPI_UNSIGNED, workerRank, WORKER_RANGE_FLAG, MPI_COMM_WORLD);
+        MPI_Send(workersToSend, n, MPI_UNSIGNED, workerRank, flag, MPI_COMM_WORLD);
     }
 }
 
-void Worker::getWorkersRange() {
+void Worker::getWorkersRange(int flag) {
     unsigned n;
-    MPI_Recv(&n, 1, MPI_UNSIGNED, MPI_ANY_SOURCE, WORKER_RANGE_FLAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(&n, 1, MPI_UNSIGNED, MPI_ANY_SOURCE, flag, MPI_COMM_WORLD, &status);
     directorRank = status.MPI_SOURCE;
 
     if(n != -1){ // if n==-1: The worker keeps its subWorkers
@@ -375,7 +384,7 @@ void Worker::getWorkersRange() {
         nWorkers = n;
         if(n!=0){
             workers = new unsigned[nWorkers];
-            MPI_Recv(workers, nWorkers, MPI_UNSIGNED, directorRank, WORKER_RANGE_FLAG, MPI_COMM_WORLD, &status);
+            MPI_Recv(workers, nWorkers, MPI_UNSIGNED, directorRank, flag, MPI_COMM_WORLD, &status);
         }
     }
 }
@@ -431,22 +440,28 @@ unsigned *Worker::findAvailableWorkers(unsigned int &n, int task, int *workerMap
     return res;
 }
 
-void Worker::transferWorkers(int fromTask, int *workerMap, int n) {
+void Worker::transferWorkers(int fromTask, int *workerMap) {
     int toTask = -1;
-    unsigned* res = new unsigned[n];
+    unsigned* res = new unsigned[nWorkers];
     int resSize=0;
+    int nOrig=0;
     for(int i=0; i<nWorkers; ++i){
         if(toTask == -1 && workerMap[i] != fromTask){
             toTask = workerMap[i];
         }
         if(workerMap[i] == fromTask || workerMap[i] == toTask){
+            if(workerMap[i] == toTask){
+                nOrig++;
+            }
             res[resSize++]=workers[i];
             workerMap[i] = toTask;
         }
     }
 
-    //sendWorkersRange()
-
+    if(resSize > 1 && nOrig < resSize) {
+        std::cout << "Sending " << resSize << " workers " << " to " << res[0] << std::endl;
+        sendWorkersRange(res[0], res + 1, resSize - 1, UPDATE_WORKER_RANGE_FLAG);
+    }
 }
 
 unsigned Worker::findWorkerIndex(unsigned int workerRank) const {
