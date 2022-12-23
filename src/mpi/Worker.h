@@ -79,16 +79,17 @@ public:
 
 
     SCIP *
-    sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, SCIP_VAR *varbrch, int depth, int maxdepth, double objlimit, double leafTimeLimit);
+    sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, int varProbIndex, double varValue, int depth,
+             int maxdepth, double objlimit, double leafTimeLimit);
 
     void sendWorkersRange(unsigned int workerRank, unsigned int *workersToSend, unsigned int n, int flag=WORKER_RANGE_FLAG);
 
     void getWorkersRange(int flag=WORKER_RANGE_FLAG);
 
     SCIP *
-    createScipInstance(double leafTimeLimit, int depth, int maxdepth, int nodeLimit, int firstBrchId, double left,
-                       double right, double objlimit, int branchingMaxDepth, double *bestSolVals,
-                       const char *filename);
+    createScipInstance(double leafTimeLimit, int depth, int maxdepth, int nodeLimit, int branchingMaxDepth,
+                       const char *filename, int *branchingHistory, double *branchingHistoryValues,
+                       int branchingHistorySize);
 
     int getScore(SCIP *scip);
 

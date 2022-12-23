@@ -18,7 +18,7 @@
 #define 	BRANCHRULE_MAXBOUNDDIST   1.0
 
 Branch_unrealistic::Branch_unrealistic(SCIP *scip, int maxdepth, double leafTimeLimit) : ObjBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
-                                                                                            BRANCHRULE_MAXBOUNDDIST), depth(0), maxdepth(maxdepth), firstBranch(nullptr), leafTimeLimit(leafTimeLimit){}
+                                                                                            BRANCHRULE_MAXBOUNDDIST), depth(0), maxdepth(maxdepth), leafTimeLimit(leafTimeLimit), branchingHistory(new std::vector<int>), branchingHistoryValues(new std::vector<double>), branching_count(-1){}
 
 
 
@@ -41,28 +41,41 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
     //if(dataWriter != nullptr && depth == 0)SCIP_CALL(SCIPallocBufferArray(scip, &varScores, nlpcands));
     if(dataWriter != nullptr && depth == 0)varScores = new int[nlpcands];
 
+    if(depth >= 0){
+        /*for(int i=0; i<nlpcands; ++i){
+            std::cout << SCIPvarGetName(lpcands[i]) << " " << lpcandsfrac[i] << std::endl;
+        }
+        int x=0;*/
+        //std::cout << "lpval: " << SCIPgetLPObjval(scip) << ", depth " << SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) << std::endl;
+     }
     // an instruction already exists for the first branching (given by the parent)
-    if(firstBranch!=nullptr){
-        assert(left<right);
+    if(branching_count >= 0){
+        SCIP_Var* varbranch;
+        SCIP_Var** vars = SCIPgetVars(scip);
+        int n = SCIPgetNVars(scip);
+        for(int i=0;i<n;++i){
+            if(SCIPvarGetProbindex(vars[i]) == branchingHistory->at(branching_count)){
+                varbranch = vars[i];
+                break;
+            }
+        }
 
-        //SCIP_CALL( SCIPbranchVar(scip, lpcands[0], NULL, NULL, NULL) );
-        //SCIP_CALL( SCIPbranchVarHole(scip, firstBranch, left, right, nullptr, nullptr) );
-        //assert(SCIPvarGetLbLocal(firstBranch) != SCIPvarGetUbLocal(firstBranch));
-        SCIP_CALL( SCIPbranchVarVal(scip, SCIPvarGetProbvar(firstBranch), left+0.1, nullptr, nullptr, nullptr));
-        *result = SCIP_BRANCHED;
-        firstBranch=nullptr;
-        SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
+        double value = branchingHistoryValues->at(branching_count);
 
+        if(branching_count == branchingHistory->size()-1){
+            branching_count = -1;
 
-        /**result = SCIP_BRANCHED;
-        SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
-        SCIP_CALL( SCIPsetRealParam(scip, "limits/time", 60));
-        if(depth>=maxdepth){
-            SCIP_CALL( Utils::configure_scip_instance(scip, false) );
-            SCIP_CALL( SCIPsetRealParam(scip, "limits/time", leafTimeLimit));
+            if(depth==maxdepth){
+                SCIPsetIntParam(scip, "branching/unrealistic/priority", 0);
+                SCIPsetRealParam(scip, "limits/time", leafTimeLimit);
+            }
         } else{
-            SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
-        }*/
+            branching_count++;
+        }
+
+        *result = SCIP_BRANCHED;
+        SCIP_CALL( SCIPbranchVar(scip, varbranch, NULL, NULL, NULL) );
+
         return SCIP_OKAY;
     }
 
@@ -82,6 +95,8 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
                             std::to_string(bestScore) + "\n").c_str());
     }
 
+    branchingHistory->push_back(SCIPvarGetProbindex(lpcands[bestcand]));
+    branchingHistoryValues->push_back(lpcandsfrac[bestcand]);
     SCIP_Node* children[2];
     SCIP_CALL( SCIPbranchVar(scip, lpcands[bestcand], &children[0], NULL, &children[1]) );
     *result = SCIP_BRANCHED;
@@ -106,12 +121,6 @@ int *Branch_unrealistic::getMaxDepthPtr() {
     return &maxdepth;
 }
 
-void Branch_unrealistic::setFirstBranch(SCIP_Var *firstBranch, double left, double right) {
-    Branch_unrealistic::firstBranch = firstBranch;
-    this->left = left;
-    this->right = right;
-}
-
 double *Branch_unrealistic::getLeafTimeLimitPtr() {
     return &leafTimeLimit;
 }
@@ -127,4 +136,29 @@ SCIP_DECL_BRANCHEXIT(Branch_unrealistic::scip_exit){
 
 void Branch_unrealistic::setDepth(int depth) {
     Branch_unrealistic::depth = depth;
+}
+
+Branch_unrealistic::~Branch_unrealistic() {
+    delete branchingHistory;
+    delete branchingHistoryValues;
+}
+
+void Branch_unrealistic::fillBranchHistory(int *history, double *values, int size) {
+    branching_count = 0;
+    for(int i=0; i<size; ++i){
+        branchingHistory->push_back(history[i]);
+        branchingHistoryValues->push_back(values[i]);
+    }
+}
+
+void Branch_unrealistic::setLeafTimeLimit(double leafTimeLimit) {
+    Branch_unrealistic::leafTimeLimit = leafTimeLimit;
+}
+
+std::vector<int> *Branch_unrealistic::getHistory() {
+    return branchingHistory;
+}
+
+std::vector<double> *Branch_unrealistic::getBranchingHistoryValues() const {
+    return branchingHistoryValues;
 }

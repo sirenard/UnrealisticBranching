@@ -97,7 +97,7 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
     //SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
 
     //SCIP_CALL( SCIPsetIntParam(scip,"nodeselection/random/stdpriority",900000) );
-    //SCIP_CALL( SCIPsetIntParam(scip,"nodeselection/dfs/stdpriority",900000) );
+    //SCIP_CALL( SCIPsetIntParam(scip,"nodeselection/dfs/stdpriority",9000000) );
     //SCIP_CALL(SCIPsetIntParam(scip, "propagating/maxroundsroot", 0));
     //SCIP_CALL( SCIPsetIntParam(scip,"propagating/maxrounds",0) );
     SCIP_CALL(SCIPsetIntParam(scip, "lp/disablecutoff", 1));
@@ -113,6 +113,18 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
 
     SCIP_CALL(SCIPsetBoolParam(scip, "benders/copybenders", FALSE));
     SCIP_CALL(SCIPsetBoolParam(scip, "benders/cutlpsol", FALSE));
+
+    SCIP_CALL(SCIPsetBoolParam(scip, "randomization/permuteconss", FALSE));
+    SCIP_CALL(SCIPsetIntParam(scip, "randomization/lpseed", 12));
+    SCIP_CALL(SCIPsetIntParam(scip, "randomization/permutationseed", 12));
+    SCIP_CALL(SCIPsetIntParam(scip, "randomization/randomseedshift", 12));
+    SCIP_CALL(SCIPsetIntParam(scip, "branching/random/seed", 12));
+
+    //SCIP_CALL( SCIPsetBoolParam(scip, "branching/vanillafullstrong/idempotent", TRUE) );
+    //SCIP_CALL(SCIPsetCharParam(scip, "nodeselection/childsel", 'd'));
+
+    srand(12);
+
     return SCIP_OKAY;
 }
 

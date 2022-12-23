@@ -55,6 +55,7 @@ int main(
     Worker::setInstance(node);
 
     srand (time(NULL));
+    srand (12);
     if(rank == 0){ // master node
         if(world_size > 1)
             node->setWorkersRange(1, world_size);
