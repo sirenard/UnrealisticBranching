@@ -38,16 +38,8 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
 
     int* varScores = nullptr; // store every variable's realNnodes
-    //if(dataWriter != nullptr && depth == 0)SCIP_CALL(SCIPallocBufferArray(scip, &varScores, nlpcands));
     if(dataWriter != nullptr && depth == 0)varScores = new int[nlpcands];
 
-    if(depth >= 0){
-        /*for(int i=0; i<nlpcands; ++i){
-            std::cout << SCIPvarGetName(lpcands[i]) << " " << lpcandsfrac[i] << std::endl;
-        }
-        int x=0;*/
-        //std::cout << "lpval: " << SCIPgetLPObjval(scip) << ", depth " << SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) << std::endl;
-     }
     // an instruction already exists for the first branching (given by the parent)
     if(branching_count >= 0){
         SCIP_Var* varbranch;
@@ -74,7 +66,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
         }
 
         *result = SCIP_BRANCHED;
-        SCIP_CALL( SCIPbranchVar(scip, varbranch, NULL, NULL, NULL) );
+        SCIP_CALL( SCIPbranchVarVal(scip, varbranch, value, NULL, NULL, NULL) );
 
         return SCIP_OKAY;
     }
@@ -85,10 +77,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
                           dataWriter != nullptr && depth == 0, varScores);
 
     int bestcand = bestcands[rand() % bestcands.size()];
-    //int bestcand = bestcands.at(0); // TODO: chose at random
-    for(auto k: bestcands){
-        if(k<bestcand) bestcand = k;
-    }
+
     if (!depth) {
         SCIPdebugMsg(scip, ("Var to branch: " + std::to_string(bestcand + 1) + "; " +
                             std::string(SCIPvarGetName(lpcands[bestcand])) + "; Score: " +
@@ -106,7 +95,6 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
         dataWriter->addNode(scip, children, nlpcands, varScores, lpcands, bestcand);
     }
 
-    //if(dataWriter != nullptr && depth == 0)SCIPfreeBufferArray(scip, &varScores);
     delete[] varScores;
     return SCIP_OKAY;
 }
