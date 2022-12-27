@@ -66,7 +66,7 @@ SCIP_DECL_DIALOGEXEC(DialogGenerateDataset::scip_exec){
     SCIP_CALL(SCIPreadProb(
             scip,
             inputfilename,
-            NULL
+            "lp"
     )
     );
 
