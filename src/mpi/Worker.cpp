@@ -153,7 +153,7 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
             int flag=0;
             MPI_Iprobe( MPI_ANY_SOURCE, SCORE_FLAG, MPI_COMM_WORLD, &flag, &status );
             if(flag || n==0) { // an old worker is available or no more available worker
-                workerRank = extractScore(lpcands, bestcands, depth, workerMap, bestScore, nullptr);
+                workerRank = extractScore(lpcands, bestcands, depth, workerMap, bestScore, varScores);
                 updateWork(workerRank, i, workerMap);
                 n = -1;
             } else{
