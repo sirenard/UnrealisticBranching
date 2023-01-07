@@ -14,7 +14,7 @@
 
 class FeaturesCalculator {
     const int nStaticFeatures;
-    const int nDynamicFeatures = 3;
+    const int nDynamicFeatures = 4;
     const int nObjectiveIncreaseStatics = 4;
     const int nfeatures;
 
