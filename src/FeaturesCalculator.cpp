@@ -229,10 +229,11 @@ void FeaturesCalculator::updateBranchCounter(SCIP_NODE **nodes, SCIP_VAR *var) {
     double increase = 1;
 
     double parentObj = SCIPnodeGetLowerbound(SCIPnodeGetParent(nodes[0]));
-
     for(auto i:{0,1}){
         increase *= SCIPnodeGetLowerbound(nodes[i]) - parentObj;
     }
+
+    increase /= parentObj;
 
     std::string key = std::string(SCIPvarGetName(var));
     numberBrchMap[key] = numberBrchMap[key] + 1 ;
