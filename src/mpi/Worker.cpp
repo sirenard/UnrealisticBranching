@@ -42,6 +42,7 @@ void Worker::work() {
 
         int score = getScore(scip_copy);
         returnScore(score);
+        SCIPfreeProb(scip_copy);
         SCIPfree(&scip_copy);
     }
 }
@@ -201,6 +202,7 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
                 bestcands.push_back(i);
             }
             if(varScores)varScores[i] = score;
+            SCIPfreeProb(scip_copy);
             SCIPfree(&scip_copy);
         }
     }
