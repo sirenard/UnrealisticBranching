@@ -14,7 +14,6 @@
 #define UPDATE_WORKER_RANGE_FLAG 6
 
 #define MIN_NUMBER_WORKER 10
-#define PREFIX_SIZE 4
 #include <vector>
 #include <mpi.h>
 #include <scip/scip.h>
@@ -22,7 +21,7 @@
 class Worker {
     static Worker* instance;
 
-    void returnScore(int score);
+    void returnScore(int score) const;
 
     // a worker can use the workers in the range [startWorkersRange, endWorkersRange]
     unsigned nWorkers;
@@ -30,11 +29,7 @@ class Worker {
     unsigned directorRank;
     const unsigned rank;
 
-    char *prefix;
-    int count;
-
-
-    MPI_Status status;
+    MPI_Status status{};
 
     bool isFinished();
 
@@ -56,14 +51,11 @@ class Worker {
      */
     unsigned findWorkerIndex(unsigned workerRank) const;
 
-    static void sortVarsArray(SCIP_VAR** vars, int n);
-    static int findVar(SCIP_VAR *var, SCIP_VAR **vars, int n);
-
 public:
     explicit Worker(unsigned rank);
     static void setInstance(Worker* node);
     static Worker* getInstance();
-    bool isMaster();
+    bool isMaster() const;
 
     void work();
 
@@ -80,7 +72,7 @@ public:
 
     SCIP *
     sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, int varProbIndex, double varValue, int depth,
-             int maxdepth, double objlimit, double leafTimeLimit);
+             int maxdepth, double leafTimeLimit);
 
     void sendWorkersRange(unsigned int workerRank, unsigned int *workersToSend, unsigned int n, int flag=WORKER_RANGE_FLAG);
 

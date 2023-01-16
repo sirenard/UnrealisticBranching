@@ -3,10 +3,8 @@
 //
 #define SCIP_DEBUG
 
-#include <scip/scipdefplugins.h>
 #include <scip/var.h>
 #include <sstream>
-#include <thread>
 #include "branch_unrealistic.h"
 #include "Utils.h"
 #include "mpi/Worker.h"
@@ -28,7 +26,6 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
     int nlpcands; // number of candidates
     std::vector<int> bestcands;
     int bestScore = -1;
-    SCIP_BoundType bestBranchSide; // which child must be cut from the tree (doesn't lead to the optimal solution)
 
     // get branching candidates
     SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, nullptr, &lpcandsfrac, nullptr, &nlpcands, nullptr) );
@@ -42,7 +39,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
     // an instruction already exists for the first branching (given by the parent)
     if(branching_count >= 0){
-        SCIP_Var* varbranch;
+        SCIP_Var *varbranch = nullptr;
         SCIP_Var** vars = SCIPgetVars(scip);
         int n = SCIPgetNVars(scip);
         for(int i=0;i<n;++i){
