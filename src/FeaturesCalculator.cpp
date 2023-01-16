@@ -226,23 +226,15 @@ FeaturesCalculator::~FeaturesCalculator() {
 }
 
 void FeaturesCalculator::updateBranchCounter(SCIP_NODE **nodes, SCIP_VAR *var) {
-    double score = 1;
-    double eps = 10e-6;
+    double increase = 1;
 
-    for(auto i:{0,1}){
-        score *= MAX(SCIPnodeGetLowerbound(nodes[i]), eps);
-    }
-
-    /*for(auto i:{0,1}){
-        double tmpObj = SCIPnodeGetEstimate(nodes[i]);
-        if(tmpObj < obj){
-            obj = tmpObj;
-        }
-    }
-
-    double parentObj = SCIPnodeGetEstimate(SCIPnodeGetParent(nodes[0]));*/
     double parentObj = SCIPnodeGetLowerbound(SCIPnodeGetParent(nodes[0]));
-    double increase = (score - parentObj)/parentObj;
+    for(auto i:{0,1}){
+        increase *= SCIPnodeGetLowerbound(nodes[i]) - parentObj;
+    }
+
+    increase /= parentObj;
+
     std::string key = std::string(SCIPvarGetName(var));
     numberBrchMap[key] = numberBrchMap[key] + 1 ;
     int n = numberBrchMap[SCIPvarGetName(var)];
@@ -259,7 +251,7 @@ void FeaturesCalculator::updateBranchCounter(SCIP_NODE **nodes, SCIP_VAR *var) {
     if(n>1){
         // update of the mean
         double oldMean = statistics[2];
-        statistics[2] = 1.0/n * (increase + 1.0/(n-1)*oldMean);
+        statistics[2] = 1.0/n * (increase + (double)(n-1)*oldMean);
 
         // update of std
         statistics[3] = ((n-2)*statistics[3] + (n-1)*std::pow(oldMean-statistics[2], 2) + std::pow(increase-statistics[2], 2))/(n-1);
@@ -274,9 +266,10 @@ void FeaturesCalculator::updateBranchCounter(SCIP_NODE **nodes, SCIP_VAR *var) {
 void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip, SCIP_Var **vars, int varsSize) {
     SCIP_Var **allVars = SCIPgetVars(scip);
 
+    // count number of fixed variables
     int nFixedVar = 0;
     for(int i=0; i<nvars; ++i){
-        if(SCIPvarGetUbGlobal(allVars[i]) == SCIPvarGetLbGlobal(allVars[i]))
+        if(SCIPvarGetUbLocal(allVars[i]) == SCIPvarGetLbLocal(allVars[i]))
             ++nFixedVar;
     }
 
@@ -284,12 +277,15 @@ void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip, SCIP_Var **va
         std::string key = std::string(SCIPvarGetName(vars[i]));
         auto* features = dynamicFeaturesMap[key];
         features[0] = (double)nFixedVar/nvars;
+
+        // up and down fractionalities of the variable
         double varObj = SCIPvarGetLPSol(vars[i]);
         features[1] = std::ceil(varObj) - varObj;
+        features[2] = varObj - std::floor(varObj);
         if(nbrchs)
-            features[2] = (double)numberBrchMap[key] / nbrchs;
+            features[3] = (double)numberBrchMap[key] / nbrchs;
         else
-            features[2] = 0;
+            features[3] = 0;
     }
 }
 
@@ -323,7 +319,6 @@ const int FeaturesCalculator::getNObjectiveIncreaseStatics() const {
 
 const std::vector<double> FeaturesCalculator::getFeatures(SCIP_Var *var) {
     std::vector<double> res;
-    int count=0;
 
     int arraySizes[3] = {
             getNStaticFeatures(),
