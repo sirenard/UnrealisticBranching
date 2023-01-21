@@ -15,19 +15,24 @@ DatasetWriter::addNode(SCIP *scip, SCIP_NODE **node, int nlpcands, int *varScore
     // compute the features
     featuresCalculator->computeDynamicProblemFeatures(scip);
     int maxScore=0;
+    int minScore=INT_MAX;
     for(int i=0; i<nlpcands; ++i){
         if(varScores[i] == INT_MAX)continue;
         if(varScores[i] > maxScore)maxScore=varScores[i];
+        if(varScores[i] < minScore)minScore=varScores[i];
     }
 
     for(int i=0; i<nlpcands; ++i){
         if(varScores[i] == INT_MAX)continue;
-        double score;
+        /*double score;
         if(maxScore == varScores[bestCand]){
             score = 1;
         } else{
-            score = 1.0 - (double)(varScores[i]-varScores[bestCand]) / (maxScore-varScores[bestCand]);
-        }
+            score = 1.0 - (double)(varScores[i]-minScore) / (maxScore-minScore);
+        }*/
+
+        double score=0;
+        if(varScores[i] <= (1+alpha)*minScore)score=1;
 
         SCIP_VAR* var = lpcands[i];
         writeLine(var, score);
