@@ -19,16 +19,45 @@ Branch_unrealistic::Branch_unrealistic(SCIP *scip, int maxdepth, double leafTime
                                                                                             BRANCHRULE_MAXBOUNDDIST), depth(0), maxdepth(maxdepth), leafTimeLimit(leafTimeLimit), branchingHistory(new std::vector<int>), branchingHistoryValues(new std::vector<double>), branching_count(-1){}
 
 
+SCIP_RETCODE Branch_unrealistic::branchCopycat(SCIP *scip, SCIP_RESULT *result) {
+    SCIP_Var *varbranch = nullptr;
+    SCIP_Var** vars = SCIPgetVars(scip);
+    int n = SCIPgetNVars(scip);
+    for(int i=0;i<n;++i){
+        if(SCIPvarGetProbindex(vars[i]) == branchingHistory->at(branching_count)){
+            varbranch = vars[i];
+            break;
+        }
+    }
 
-SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
+    double value = branchingHistoryValues->at(branching_count);
+
+    if(branching_count == branchingHistory->size()-1){
+        branching_count = -1;
+
+        if(depth==maxdepth){
+            SCIPsetIntParam(scip, "branching/unrealistic/priority", 0);
+            SCIPsetRealParam(scip, "limits/time", leafTimeLimit);
+        }
+    } else{
+        branching_count++;
+    }
+
+    *result = SCIP_BRANCHED;
+    SCIP_CALL(SCIPbranchVarVal(scip, varbranch, value, NULL, NULL, NULL));
+
+    return SCIP_OKAY;
+}
+
+SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *result) {
     SCIP_VAR** lpcands;
-    SCIP_Real* lpcandsfrac;
+    SCIP_Real * lpcandsfrac;
     int nlpcands; // number of candidates
     std::vector<int> bestcands;
     int bestScore = -1;
 
     // get branching candidates
-    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, nullptr, &lpcandsfrac, nullptr, &nlpcands, nullptr) );
+    SCIP_CALL(SCIPgetLPBranchCands(scip, &lpcands, nullptr, &lpcandsfrac, nullptr, &nlpcands, nullptr));
     assert(nlpcands > 0);
 
     for (int i = 0; i < nlpcands; ++i)lpcandsfrac[i] = SCIPvarGetLPSol(lpcands[i]);
@@ -36,39 +65,6 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
     int* varScores = nullptr; // store every variable's realNnodes
     if(dataWriter != nullptr && depth == 0)varScores = new int[nlpcands];
-
-    // an instruction already exists for the first branching (given by the parent)
-    if(branching_count >= 0){
-        SCIP_Var *varbranch = nullptr;
-        SCIP_Var** vars = SCIPgetVars(scip);
-        int n = SCIPgetNVars(scip);
-        for(int i=0;i<n;++i){
-            if(SCIPvarGetProbindex(vars[i]) == branchingHistory->at(branching_count)){
-                varbranch = vars[i];
-                break;
-            }
-        }
-
-        double value = branchingHistoryValues->at(branching_count);
-
-        if(branching_count == branchingHistory->size()-1){
-            branching_count = -1;
-
-            if(depth==maxdepth){
-                SCIPsetIntParam(scip, "branching/unrealistic/priority", 0);
-                SCIPsetRealParam(scip, "limits/time", leafTimeLimit);
-            }
-        } else{
-            branching_count++;
-        }
-
-        *result = SCIP_BRANCHED;
-        SCIP_CALL( SCIPbranchVarVal(scip, varbranch, value, NULL, NULL, NULL) );
-
-        return SCIP_OKAY;
-    }
-
-
     Worker* worker = Worker::getInstance();
     worker->computeScores(scip, lpcands, nlpcands, bestcands, bestScore, depth + 1, maxdepth, leafTimeLimit,
                           dataWriter != nullptr && depth == 0, varScores);
@@ -84,7 +80,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
     branchingHistory->push_back(SCIPvarGetProbindex(lpcands[bestcand]));
     branchingHistoryValues->push_back(lpcandsfrac[bestcand]);
     SCIP_Node* children[2];
-    SCIP_CALL( SCIPbranchVar(scip, lpcands[bestcand], &children[0], NULL, &children[1]) );
+    SCIP_CALL(SCIPbranchVar(scip, lpcands[bestcand], &children[0], NULL, &children[1]));
     *result = SCIP_BRANCHED;
 
 
@@ -94,6 +90,15 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
     delete[] varScores;
     return SCIP_OKAY;
+}
+
+SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
+    // an instruction already exists for the first branching (given by the parent)
+    if(branching_count >= 0){
+        return branchCopycat(scip, result);
+    } else{
+        return branchUnrealistic(scip, result);
+    }
 }
 
 

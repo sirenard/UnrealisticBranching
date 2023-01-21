@@ -27,6 +27,19 @@ private:
     int branching_count;
 
     SCIP_DECL_BRANCHEXECLP(scip_execlp) override;
+
+    /**
+     * Branch by following the branchingHistory vector. Used to make a copy of a tree.
+     */
+    SCIP_RETCODE branchCopycat(SCIP *scip, SCIP_RESULT *result);
+
+    /**
+     * Apply the unrealistic branching. Branch on the variable with less nodes.
+     * If a datawriter is given, use it to store new features.
+     */
+    SCIP_RETCODE branchUnrealistic(SCIP *scip, SCIP_RESULT *result);
+
+
     SCIP_DECL_BRANCHEXIT(scip_exit) override;
 public:
     explicit Branch_unrealistic(SCIP *scip, int maxdepth=1, double leafTimeLimit=-1);
