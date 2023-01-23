@@ -266,6 +266,10 @@ void FeaturesCalculator::updateBranchCounter(SCIP_NODE **nodes, SCIP_VAR *var) {
 void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip, SCIP_Var **vars, int varsSize) {
     SCIP_Var **allVars = SCIPgetVars(scip);
 
+    double* lb;
+    double* ub;
+    computeSensitivity(scip, lb, ub);
+
     // count number of fixed variables
     int nFixedVar = 0;
     for(int i=0; i<nvars; ++i){
@@ -274,6 +278,7 @@ void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip, SCIP_Var **va
     }
 
     for(int i=0; i<varsSize; ++i){
+        //std::cout << lb[i] << " <= " << SCIPvarGetName(allVars[i]) << " <= " << ub[i] << std::endl;
         std::string key = std::string(SCIPvarGetName(vars[i]));
         auto* features = dynamicFeaturesMap[key];
         features[0] = (double)nFixedVar/nvars;
@@ -286,7 +291,16 @@ void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip, SCIP_Var **va
             features[3] = (double)numberBrchMap[key] / nbrchs;
         else
             features[3] = 0;
+
+        features[4] = lb[i]/ std::abs(SCIPvarGetObj(vars[i]));
+        features[5] = lb[i]/ std::abs(SCIPvarGetObj(vars[i]));
+
+        //features[4]=0;
+        //features[5]=0;
     }
+
+    delete[] lb;
+    delete[] ub;
 }
 
 void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip) {
@@ -339,5 +353,46 @@ const std::vector<double> FeaturesCalculator::getFeatures(SCIP_Var *var) {
     }
 
     return res;
+}
+
+void FeaturesCalculator::computeSensitivity(SCIP *scip, double *&lb, double *&ub) {
+    SCIP_Cons** conss = SCIPgetConss(scip);
+    int m = SCIPgetNConss(scip);
+    int n = SCIPgetNVars(scip);
+
+    double* consCoef = new double[n];
+    SCIP_Var** consVars = new SCIP_Var*[n];
+    SCIP_Bool success;
+
+    lb = new double[n];
+    std::fill(lb, lb+n, SCIP_REAL_MIN);
+
+    ub = new double[n];
+    std::fill(ub, ub+n, SCIP_REAL_MAX);
+
+    for(int k=0; k<m; ++k){
+        SCIPgetConsVals(scip, conss[k], consCoef, nvars, &success);
+        SCIPgetConsVars(scip, conss[k], consVars, nvars, &success);
+
+        int consSize;
+        SCIPgetConsNVars(scip, conss[k], &consSize, &success);
+        for(int j=0; j<consSize; ++j){
+            SCIP_Var* var = consVars[j];
+            double varValue = SCIPvarGetLPSol(var);
+            int index = SCIPvarGetProbindex(var);
+            if(SCIPvarGetLPSol(var) != 0){
+                if(consCoef[j] != 0){
+                   double val = SCIPvarGetObj(var)/consCoef[j];
+                   if(consCoef[j] > 0 && varValue+val < ub[index]){
+                       ub[index] = varValue+val;
+                   } else if(consCoef[j] < 0 && varValue+val > lb[index]){
+                       lb[index] = varValue+val;
+                   }
+                }
+            }
+        }
+    }
+    delete[] consCoef;
+    delete[] consVars;
 }
 

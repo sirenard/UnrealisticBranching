@@ -14,7 +14,7 @@
 
 class FeaturesCalculator {
     const int nStaticFeatures;
-    const int nDynamicFeatures = 4;
+    const int nDynamicFeatures = 6;
     const int nObjectiveIncreaseStatics = 4;
     const int nfeatures;
 
@@ -42,6 +42,8 @@ class FeaturesCalculator {
     void
     computeSet1StaticFeatures(int signC, SCIP_Var *const *vars, int i, double *features, unsigned int &featureIndex,
                               double &objCoefVari) const;
+
+    void computeSensitivity(SCIP *scip, double *&lb, double *&ub);
 public:
     /**
      * Build Feature calculator and compute static features

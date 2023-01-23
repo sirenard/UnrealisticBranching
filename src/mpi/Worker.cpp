@@ -115,16 +115,6 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
                            int maxdepth, double leafTimeLimit, bool noNodeLimitation, int *varScores) {
     checkForNewWorkers();
 
-    SCIP_Real objlimit;
-    // get values of the best sol
-    SCIP_Sol* bestSol = SCIPgetBestSol(scip);
-
-    if(bestSol == NULL) {
-        objlimit = SCIPgetObjlimit(scip);
-    } else{
-        objlimit = SCIPgetSolOrigObj(scip, bestSol);
-    }
-
     unsigned minNumberWorker;
     if(depth==maxdepth){
         minNumberWorker = 1;

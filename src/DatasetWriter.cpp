@@ -23,16 +23,16 @@ DatasetWriter::addNode(SCIP *scip, SCIP_NODE **node, int nlpcands, int *varScore
     }
 
     for(int i=0; i<nlpcands; ++i){
-        /*if(varScores[i] == INT_MAX)continue;
+        if(varScores[i] == INT_MAX)continue;
         double score;
         if(maxScore == varScores[bestCand]){
             score = 1;
         } else{
             score = 1.0 - (double)(varScores[i]-minScore) / (maxScore-minScore);
-        }*/
+        }
 
-        double score=0;
-        if(varScores[i] <= (1.0+ALPHA)*minScore)score=1;
+        /*double score=0;
+        if(varScores[i] <= (1.0+ALPHA)*minScore)score=1;*/
 
         SCIP_VAR* var = lpcands[i];
         writeLine(var, score);

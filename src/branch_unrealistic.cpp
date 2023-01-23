@@ -85,6 +85,11 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
 
 
     if(dataWriter && depth==0) {
+        // the score must be: how many nodes needed from the current node. Thus remove from each score the current
+        // number of nodes
+        for(int i=0; i<nlpcands; ++i){
+            varScores[i] -= SCIPgetNNodes(scip);
+        }
         dataWriter->addNode(scip, children, nlpcands, varScores, lpcands, bestcand);
     }
 
