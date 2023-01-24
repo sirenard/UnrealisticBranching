@@ -14,8 +14,8 @@
 
 class FeaturesCalculator {
     const int nStaticFeatures;
-    const int nDynamicFeatures = 6;
-    const int nObjectiveIncreaseStatics = 4;
+    const int nDynamicFeatures = 5;
+    const int nObjectiveIncreaseStatics = 5;
     const int nfeatures;
 
     std::map<std::string , int> varnameIndexMap;

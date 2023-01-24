@@ -226,19 +226,20 @@ FeaturesCalculator::~FeaturesCalculator() {
 }
 
 void FeaturesCalculator::updateBranchCounter(SCIP_NODE **nodes, SCIP_VAR *var) {
-    double increase = 1;
+    double increase = 0;
 
     double parentObj = SCIPnodeGetLowerbound(SCIPnodeGetParent(nodes[0]));
     for(auto i:{0,1}){
-        increase *= SCIPnodeGetLowerbound(nodes[i]) - parentObj;
+        double tmp = SCIPnodeGetLowerbound(nodes[i]) - parentObj;
+        if(tmp > increase) increase = tmp;
     }
 
     increase /= parentObj;
 
     std::string key = std::string(SCIPvarGetName(var));
-    numberBrchMap[key] = numberBrchMap[key] + 1 ;
-    int n = numberBrchMap[SCIPvarGetName(var)];
-    double* statistics = objectiveIncreaseStaticsMap[SCIPvarGetName(var)];
+    int n = numberBrchMap[key] + 1;
+    numberBrchMap[key] = n ;
+    double* statistics = objectiveIncreaseStaticsMap[key];
 
     // update min/max
     if(increase < statistics[0] || n == 1){
@@ -259,7 +260,9 @@ void FeaturesCalculator::updateBranchCounter(SCIP_NODE **nodes, SCIP_VAR *var) {
         statistics[2] = increase;
         statistics[3] = 0;
     }
+
     nbrchs++;
+    statistics[4] = (double)numberBrchMap[key] / nbrchs;
 }
 
 
@@ -278,7 +281,6 @@ void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip, SCIP_Var **va
     }
 
     for(int i=0; i<varsSize; ++i){
-        //std::cout << lb[i] << " <= " << SCIPvarGetName(allVars[i]) << " <= " << ub[i] << std::endl;
         std::string key = std::string(SCIPvarGetName(vars[i]));
         auto* features = dynamicFeaturesMap[key];
         features[0] = (double)nFixedVar/nvars;
@@ -287,23 +289,15 @@ void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip, SCIP_Var **va
         double varObj = SCIPvarGetLPSol(vars[i]);
         features[1] = std::ceil(varObj) - varObj;
         features[2] = varObj - std::floor(varObj);
-        if(nbrchs)
-            features[3] = (double)numberBrchMap[key] / nbrchs;
-        else
-            features[3] = 0;
 
         double varObjCoef = std::abs(SCIPvarGetObj(vars[i]));
         if(varObjCoef!=0){
-            features[4] = lb[i]/ varObjCoef;
-            features[5] = ub[i]/ varObjCoef;
+            features[3] = lb[i]/ varObjCoef;
+            features[4] = ub[i]/ varObjCoef;
         } else{
+            features[3] = 0;
             features[4] = 0;
-            features[5] = 0;
         }
-
-
-        //features[4]=0;
-        //features[5]=0;
     }
 
     delete[] lb;

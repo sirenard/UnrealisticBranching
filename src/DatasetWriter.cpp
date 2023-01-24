@@ -31,9 +31,6 @@ DatasetWriter::addNode(SCIP *scip, SCIP_NODE **node, int nlpcands, int *varScore
             score = 1.0 - (double)(varScores[i]-minScore) / (maxScore-minScore);
         }
 
-        /*double score=0;
-        if(varScores[i] <= (1.0+ALPHA)*minScore)score=1;*/
-
         SCIP_VAR* var = lpcands[i];
         writeLine(var, score);
     }

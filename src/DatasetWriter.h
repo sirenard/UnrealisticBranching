@@ -14,8 +14,6 @@
 #include "objscip/objscip.h"
 #include "FeaturesCalculator.h"
 
-#define ALPHA 0.2
-
 class DatasetWriter {
     std::fstream nodeSelectionStream, branchStream;
     FeaturesCalculator* featuresCalculator;
