@@ -268,7 +268,7 @@ void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip, SCIP_Var **va
 
     double* lb;
     double* ub;
-    computeSensitivity(scip, lb, ub);
+    computeSensitivity(scip, lb, ub, vars, varsSize);
 
     // count number of fixed variables
     int nFixedVar = 0;
@@ -292,8 +292,15 @@ void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip, SCIP_Var **va
         else
             features[3] = 0;
 
-        features[4] = lb[i]/ std::abs(SCIPvarGetObj(vars[i]));
-        features[5] = lb[i]/ std::abs(SCIPvarGetObj(vars[i]));
+        double varObjCoef = std::abs(SCIPvarGetObj(vars[i]));
+        if(varObjCoef!=0){
+            features[4] = lb[i]/ varObjCoef;
+            features[5] = ub[i]/ varObjCoef;
+        } else{
+            features[4] = 0;
+            features[5] = 0;
+        }
+
 
         //features[4]=0;
         //features[5]=0;
@@ -355,20 +362,28 @@ const std::vector<double> FeaturesCalculator::getFeatures(SCIP_Var *var) {
     return res;
 }
 
-void FeaturesCalculator::computeSensitivity(SCIP *scip, double *&lb, double *&ub) {
+void FeaturesCalculator::computeSensitivity(SCIP *scip, double *&lb, double *&ub, SCIP_Var **vars, int varsSize) {
     SCIP_Cons** conss = SCIPgetConss(scip);
     int m = SCIPgetNConss(scip);
     int n = SCIPgetNVars(scip);
 
     double* consCoef = new double[n];
     SCIP_Var** consVars = new SCIP_Var*[n];
+
+    int* present = new int[nvars];
+    std::fill(present, present+nvars, -1);
+    for(int i = 0; i < varsSize; i++){
+        int index = SCIPvarGetProbindex(vars[i]);
+        present[index] = i;
+    }
+
     SCIP_Bool success;
 
-    lb = new double[n];
-    std::fill(lb, lb+n, SCIP_REAL_MIN);
+    lb = new double[nvars];
+    std::fill(lb, lb+nvars, SCIP_REAL_MIN);
 
-    ub = new double[n];
-    std::fill(ub, ub+n, SCIP_REAL_MAX);
+    ub = new double[nvars];
+    std::fill(ub, ub+nvars, SCIP_REAL_MAX);
 
     for(int k=0; k<m; ++k){
         SCIPgetConsVals(scip, conss[k], consCoef, nvars, &success);
@@ -378,8 +393,10 @@ void FeaturesCalculator::computeSensitivity(SCIP *scip, double *&lb, double *&ub
         SCIPgetConsNVars(scip, conss[k], &consSize, &success);
         for(int j=0; j<consSize; ++j){
             SCIP_Var* var = consVars[j];
+            int index = present[SCIPvarGetProbindex(var)];
+            if(index==-1)continue;
+
             double varValue = SCIPvarGetLPSol(var);
-            int index = SCIPvarGetProbindex(var);
             if(SCIPvarGetLPSol(var) != 0){
                 if(consCoef[j] != 0){
                    double val = SCIPvarGetObj(var)/consCoef[j];
