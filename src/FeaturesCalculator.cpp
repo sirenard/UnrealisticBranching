@@ -122,10 +122,7 @@ void FeaturesCalculator::computeSet1StaticFeatures(int signC, SCIP_Var *const *v
     }
     for(int k: {0, 1}) {
         if(signC!=0 && k==1)continue;
-        if(features[featureIndex])
-            features[featureIndex] = std::abs(objCoefVari) / features[featureIndex];
-        else
-            features[featureIndex] = 0;
+        features[featureIndex] = std::abs(objCoefVari) / features[featureIndex];
         ++featureIndex;
     }
     /////
@@ -171,24 +168,20 @@ void FeaturesCalculator::computeM3Features(int signA, const double *consCoef, in
 void FeaturesCalculator::computeM2Features(int signC, const double *consCoef, int i, unsigned int featureIndex,
                                            double *features, double objCoefVari, double val, int indexOffset) const {
     // compute M2 (4 features) |c_i|/A_ji
-    if(consCoef[i]!=0) {
-        val = std::abs(objCoefVari) / consCoef[i];
-        int localIndexOffset;
+    val = std::abs(objCoefVari) / consCoef[i];
+    int localIndexOffset;
 
-        if (signC == 0)
-            localIndexOffset = 2 * (objCoefVari < 0);
-        else
-            localIndexOffset = 0;
+    if (signC == 0)
+        localIndexOffset = 2 * (objCoefVari < 0);
+    else
+        localIndexOffset = 0;
 
-        if (val < features[featureIndex + indexOffset + localIndexOffset]) { // keep the min
-            features[featureIndex + indexOffset + localIndexOffset] = val;
-        }
-        if (val > features[featureIndex + indexOffset + localIndexOffset + 1]) { //keep the max
-            features[featureIndex + indexOffset + localIndexOffset + 1] = val;
-        }
+    if (val < features[featureIndex + indexOffset + localIndexOffset]) { // keep the min
+        features[featureIndex + indexOffset + localIndexOffset] = val;
     }
-    ////
-
+    if (val > features[featureIndex + indexOffset + localIndexOffset + 1]) { //keep the max
+        features[featureIndex + indexOffset + localIndexOffset + 1] = val;
+    }
 }
 
 void FeaturesCalculator::computeM1Features(int signB, const double *consCoef, int i, unsigned int featureIndex,
@@ -196,17 +189,15 @@ void FeaturesCalculator::computeM1Features(int signB, const double *consCoef, in
 // TODO: M1- utils if c_j >= 0 for all j ???? Maybe less features for this types of problems. Same reflexion for other features set
     int localIndexOffset=0;
     if(signB==0)
-        localIndexOffset = 2 * (bj<0);
+    localIndexOffset = 2 * (bj<0);
 
-    if(bj!=0) {
-        double val = consCoef[i] / std::abs(bj);
+    double val = consCoef[i] / std::abs(bj);
 
-        if (val < features[featureIndex + localIndexOffset]) { // keep the min
-            features[featureIndex + localIndexOffset] = val;
-        }
-        if (val > features[featureIndex + localIndexOffset + 1]) {//keep the max
-            features[featureIndex + localIndexOffset + 1] = val;
-        }
+    if (val < features[featureIndex + localIndexOffset]) { // keep the min
+        features[featureIndex + localIndexOffset] = val;
+    }
+    if (val > features[featureIndex + localIndexOffset + 1]) {//keep the max
+        features[featureIndex + localIndexOffset + 1] = val;
     }
 }
 
