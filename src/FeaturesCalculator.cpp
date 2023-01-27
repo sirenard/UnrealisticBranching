@@ -348,60 +348,90 @@ const std::vector<double> FeaturesCalculator::getFeatures(SCIP_Var *var) {
 }
 
 void FeaturesCalculator::computeSensitivity(SCIP *scip, double *&lb, double *&ub, SCIP_Var **vars, int varsSize) {
-
-
-    SCIP_Cons** conss = SCIPgetConss(scip);
-    int m = SCIPgetNConss(scip);
-    int n = SCIPgetNVars(scip);
-
     SCIP_LPi* lpi;
     SCIPgetLPI(scip, &lpi);
-    int nrows, ncols;
-    SCIPlpiGetNRows(lpi, &nrows);
-    SCIPlpiGetNCols(lpi, &ncols);
+    int nrows=SCIPgetNLPRows(scip);
+    int ncols=SCIPgetNLPCols(scip);
+    SCIP_Var** allvars = SCIPgetVars(scip);
 
-    double* coefs = new double[10];
-    SCIPlpiGetBInvARow(lpi, 0, NULL, coefs, NULL, NULL);
+    int count = 0;
+    SCIP_Cons** conss = SCIPgetConss(scip);
+    SCIP_Bool success;
+    for(int i=0; i< SCIPgetNConss(scip); ++i){
+        double rhs = SCIPconsGetRhs(scip, conss[i], &success);
+        double lhs = SCIPconsGetLhs(scip, conss[i], &success);
+        if(rhs != lhs){
+            count++;
+        }
+    }
 
-    dlib::matrix<double> a(nrows, ncols);
+    dlib::matrix<double> a(nrows, ncols+count);
+
+    int c=ncols;
     for(int i=0; i<nrows; ++i){
         for(int j=0; j<ncols; ++j){
             double val;
             SCIPlpiGetCoef(lpi, i, j, &val);
-            a(i, j) = val;
+            a(i,j)=val;
         }
-    }
 
-    dlib::matrix<double> a_b(ncols, ncols);
-    int* basisIndexes = new int[ncols];
-    SCIPlpiGetBasisInd(lpi, basisIndexes);
-    for(int i=0; i<nrows; ++i){
-        for(int j=0; j<nrows; ++j){
-            double val;
-            int idx = basisIndexes[i];
-            if(idx<0){
-                idx *= -1;
+        bool slackAdded=false;
+        for(int j=ncols; j<ncols+count; ++j){
+            a(i,j)=0;
+            if(!slackAdded && j==c) {
+                slackAdded = true;
+                double rhs = SCIPconsGetRhs(scip, conss[j - ncols], &success);
+                double lhs = SCIPconsGetLhs(scip, conss[j - ncols], &success);
+                if (rhs != lhs) {
+                    if (rhs != 1e20) {
+                        a(i, c) = 1;
+                    } else {
+                        a(i, c) = -1;
+                    }
+                    c++;
+                }
             }
-            SCIPlpiGetCoef(lpi, i, idx, &val);
-            a_b(i, j) = val;
         }
     }
 
-    dlib::matrix<double> as(m, n);
-    as = dlib::inv(a_b) * a;
+    int* indexes = new int[ncols+count-nrows];
+    dlib::matrix<double> ab(nrows, nrows);
+    dlib::matrix<double> an(nrows, ncols+count-nrows);
+    dlib::matrix<double> cb(nrows, 1);
+    dlib::matrix<double> cn(ncols+count-nrows, 1);
+    int k1=0;
+    int k2=0;
+    for(int j=0; j < ncols+count; ++j){
+        double redcost=1;
+        double obj=0;
+        if(j<ncols){
+            redcost = SCIPgetVarRedcost(scip, allvars[j]);
+            obj= SCIPvarGetObj(allvars[j]);
+        }
 
-    std::cout << a << std::endl;
-    double* consCoef = new double[n];
-    SCIP_Var** consVars = new SCIP_Var*[n];
-
-    int* present = new int[nvars];
-    std::fill(present, present+nvars, -1);
-    for(int i = 0; i < varsSize; i++){
-        int index = SCIPvarGetProbindex(vars[i]);
-        present[index] = i;
+        if(redcost > 0 || j>=ncols){
+            for(int i=0; i<nrows; ++i){
+                an(i, k2) = a(i, j);
+            }
+            cn(k2, 0) = obj;
+            indexes[k2] = j;
+            k2++;
+        } else{
+            for(int i=0; i<nrows; ++i){
+                ab(i, k1) = a(i, j);
+            }
+            cb(k1, 0) = obj;
+            k1++;
+        }
     }
 
-    SCIP_Bool success;
+    std::cout << a.nr() << " x " << a.nc() << std::endl;
+
+    dlib::matrix<double> rc(1, ncols+count-nrows);
+    rc = dlib::trans(cn) - dlib::trans(cb) * dlib::inv(ab) * an;
+    a = dlib::inv(ab)*a;
+    std::cout << ab << std::endl;
+
 
     lb = new double[nvars];
     std::fill(lb, lb+nvars, SCIP_REAL_MIN);
@@ -409,29 +439,21 @@ void FeaturesCalculator::computeSensitivity(SCIP *scip, double *&lb, double *&ub
     ub = new double[nvars];
     std::fill(ub, ub+nvars, SCIP_REAL_MAX);
 
-    for(int k=0; k<m; ++k){
-        SCIPgetConsVals(scip, conss[k], consCoef, nvars, &success);
-        SCIPgetConsVars(scip, conss[k], consVars, nvars, &success);
-
-        int consSize;
-        SCIPgetConsNVars(scip, conss[k], &consSize, &success);
-        for(int j=0; j<consSize; ++j){
-            SCIP_Var* var = consVars[j];
-            int index = present[SCIPvarGetProbindex(var)];
-            if(index==-1)continue;
-
-            double varObjCoef = SCIPvarGetObj(var);
-            if(consCoef[j] != 0){
-               double val = varObjCoef/consCoef[j];
-               if(consCoef[j] > 0 && varObjCoef+val < ub[index]){
-                   ub[index] = varObjCoef+val;
-               } else if(consCoef[j] < 0 && varObjCoef+val > lb[index]){
-                   lb[index] = varObjCoef+val;
-               }
+    for(int k=0; k<varsSize; ++k){
+        double varobj = cb(k);
+        for(int i=0; i<ncols+count-nrows; ++i){
+            int j = indexes[i];
+            double val = varobj + rc(i)/a(k,j);
+            std::cout << varobj << " + " << rc(i) << " / " << a(k,j) << " -> " << val<< std::endl;
+            double eps = SCIPepsilon(scip);
+            if(a(k,j) < -eps && val > lb[k]){
+                lb[k] = val;
+            } else if(a(k,j) > eps && val < ub[k]){
+                ub[k] = val;
             }
         }
     }
-    delete[] consCoef;
-    delete[] consVars;
+
+    delete[] indexes;
 }
 

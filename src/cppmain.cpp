@@ -26,15 +26,8 @@ SCIP_RETCODE runSCIP(
      *********/
     Utils::create_scip_instance(&scip, true);
 
-    SCIPreadProb(scip, "/home/simon/Téléchargements/test.lp", "lp");
-    SCIPsolve(scip);
-    FeaturesCalculator* f = new FeaturesCalculator(scip, 1, 1, 1);
-    double* lb;
-    double* ub;
-    SCIP_Var** vars = SCIPgetVars(scip);
-    f->computeSensitivity(scip, lb, ub, vars, 2);
 
-    //SCIP_CALL( SCIPprocessShellArguments(scip, argc, argv, "scipmain.set") );
+    SCIP_CALL( SCIPprocessShellArguments(scip, argc, argv, "scipmain.set") );
    /********************
     * Deinitialization *
     ********************/
