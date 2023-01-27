@@ -348,90 +348,9 @@ const std::vector<double> FeaturesCalculator::getFeatures(SCIP_Var *var) {
 }
 
 void FeaturesCalculator::computeSensitivity(SCIP *scip, double *&lb, double *&ub, SCIP_Var **vars, int varsSize) {
-    SCIP_LPi* lpi;
-    SCIPgetLPI(scip, &lpi);
     int nrows=SCIPgetNLPRows(scip);
     int ncols=SCIPgetNLPCols(scip);
     SCIP_Var** allvars = SCIPgetVars(scip);
-
-    int count = 0;
-    SCIP_Cons** conss = SCIPgetConss(scip);
-    SCIP_Bool success;
-    for(int i=0; i< SCIPgetNConss(scip); ++i){
-        double rhs = SCIPconsGetRhs(scip, conss[i], &success);
-        double lhs = SCIPconsGetLhs(scip, conss[i], &success);
-        if(rhs != lhs){
-            count++;
-        }
-    }
-
-    dlib::matrix<double> a(nrows, ncols+count);
-
-    int c=ncols;
-    for(int i=0; i<nrows; ++i){
-        for(int j=0; j<ncols; ++j){
-            double val;
-            SCIPlpiGetCoef(lpi, i, j, &val);
-            a(i,j)=val;
-        }
-
-        bool slackAdded=false;
-        for(int j=ncols; j<ncols+count; ++j){
-            a(i,j)=0;
-            if(!slackAdded && j==c) {
-                slackAdded = true;
-                double rhs = SCIPconsGetRhs(scip, conss[j - ncols], &success);
-                double lhs = SCIPconsGetLhs(scip, conss[j - ncols], &success);
-                if (rhs != lhs) {
-                    if (rhs != 1e20) {
-                        a(i, c) = 1;
-                    } else {
-                        a(i, c) = -1;
-                    }
-                    c++;
-                }
-            }
-        }
-    }
-
-    int* indexes = new int[ncols+count-nrows];
-    dlib::matrix<double> ab(nrows, nrows);
-    dlib::matrix<double> an(nrows, ncols+count-nrows);
-    dlib::matrix<double> cb(nrows, 1);
-    dlib::matrix<double> cn(ncols+count-nrows, 1);
-    int k1=0;
-    int k2=0;
-    for(int j=0; j < ncols+count; ++j){
-        double redcost=1;
-        double obj=0;
-        if(j<ncols){
-            redcost = SCIPgetVarRedcost(scip, allvars[j]);
-            obj= SCIPvarGetObj(allvars[j]);
-        }
-
-        if(redcost > 0 || j>=ncols){
-            for(int i=0; i<nrows; ++i){
-                an(i, k2) = a(i, j);
-            }
-            cn(k2, 0) = obj;
-            indexes[k2] = j;
-            k2++;
-        } else{
-            for(int i=0; i<nrows; ++i){
-                ab(i, k1) = a(i, j);
-            }
-            cb(k1, 0) = obj;
-            k1++;
-        }
-    }
-
-    std::cout << a.nr() << " x " << a.nc() << std::endl;
-
-    dlib::matrix<double> rc(1, ncols+count-nrows);
-    rc = dlib::trans(cn) - dlib::trans(cb) * dlib::inv(ab) * an;
-    a = dlib::inv(ab)*a;
-    std::cout << ab << std::endl;
-
 
     lb = new double[nvars];
     std::fill(lb, lb+nvars, SCIP_REAL_MIN);
@@ -439,21 +358,33 @@ void FeaturesCalculator::computeSensitivity(SCIP *scip, double *&lb, double *&ub
     ub = new double[nvars];
     std::fill(ub, ub+nvars, SCIP_REAL_MAX);
 
-    for(int k=0; k<varsSize; ++k){
-        double varobj = cb(k);
-        for(int i=0; i<ncols+count-nrows; ++i){
-            int j = indexes[i];
-            double val = varobj + rc(i)/a(k,j);
-            std::cout << varobj << " + " << rc(i) << " / " << a(k,j) << " -> " << val<< std::endl;
-            double eps = SCIPepsilon(scip);
-            if(a(k,j) < -eps && val > lb[k]){
-                lb[k] = val;
-            } else if(a(k,j) > eps && val < ub[k]){
-                ub[k] = val;
+    double* row = new double[ncols];
+    double* redcost = new double[ncols];
+    for(int i=0; i<ncols; ++i){
+        redcost[i] = SCIPgetVarRedcost(scip, allvars[i]);
+    }
+
+    int count=nrows-1;
+    double eps = SCIPepsilon(scip);
+    for(int i=0; i<varsSize; ++i){
+        if(redcost[i] != 0)continue;
+        double varobj = SCIPvarGetObj(vars[i]);
+        int k = count--;
+        SCIPgetLPBInvARow(scip, k, NULL, row, NULL, NULL);
+        for(int j=0; j<ncols; ++j){
+            if(redcost[j] >= -eps && redcost[j] <= eps)continue; // equals 0
+            double val = varobj + redcost[j]/row[j];
+            std::cout << varobj << "+" << redcost[j] << "/" <<row[j] << std::endl;
+            if(row[j] < -eps && val > lb[i]){
+                lb[i] = val;
+            } else if(row[j] > eps && val < ub[i]){
+                ub[i] = val;
             }
         }
     }
 
-    delete[] indexes;
+
+    delete[] row;
+    delete[] redcost;
 }
 
