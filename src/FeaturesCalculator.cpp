@@ -348,10 +348,49 @@ const std::vector<double> FeaturesCalculator::getFeatures(SCIP_Var *var) {
 }
 
 void FeaturesCalculator::computeSensitivity(SCIP *scip, double *&lb, double *&ub, SCIP_Var **vars, int varsSize) {
+
+
     SCIP_Cons** conss = SCIPgetConss(scip);
     int m = SCIPgetNConss(scip);
     int n = SCIPgetNVars(scip);
 
+    SCIP_LPi* lpi;
+    SCIPgetLPI(scip, &lpi);
+    int nrows, ncols;
+    SCIPlpiGetNRows(lpi, &nrows);
+    SCIPlpiGetNCols(lpi, &ncols);
+
+    double* coefs = new double[10];
+    SCIPlpiGetBInvARow(lpi, 0, NULL, coefs, NULL, NULL);
+
+    dlib::matrix<double> a(nrows, ncols);
+    for(int i=0; i<nrows; ++i){
+        for(int j=0; j<ncols; ++j){
+            double val;
+            SCIPlpiGetCoef(lpi, i, j, &val);
+            a(i, j) = val;
+        }
+    }
+
+    dlib::matrix<double> a_b(ncols, ncols);
+    int* basisIndexes = new int[ncols];
+    SCIPlpiGetBasisInd(lpi, basisIndexes);
+    for(int i=0; i<nrows; ++i){
+        for(int j=0; j<nrows; ++j){
+            double val;
+            int idx = basisIndexes[i];
+            if(idx<0){
+                idx *= -1;
+            }
+            SCIPlpiGetCoef(lpi, i, idx, &val);
+            a_b(i, j) = val;
+        }
+    }
+
+    dlib::matrix<double> as(m, n);
+    as = dlib::inv(a_b) * a;
+
+    std::cout << a << std::endl;
     double* consCoef = new double[n];
     SCIP_Var** consVars = new SCIP_Var*[n];
 
@@ -381,16 +420,14 @@ void FeaturesCalculator::computeSensitivity(SCIP *scip, double *&lb, double *&ub
             int index = present[SCIPvarGetProbindex(var)];
             if(index==-1)continue;
 
-            double varValue = SCIPvarGetLPSol(var);
-            if(SCIPvarGetLPSol(var) != 0){
-                if(consCoef[j] != 0){
-                   double val = SCIPvarGetObj(var)/consCoef[j];
-                   if(consCoef[j] > 0 && varValue+val < ub[index]){
-                       ub[index] = varValue+val;
-                   } else if(consCoef[j] < 0 && varValue+val > lb[index]){
-                       lb[index] = varValue+val;
-                   }
-                }
+            double varObjCoef = SCIPvarGetObj(var);
+            if(consCoef[j] != 0){
+               double val = varObjCoef/consCoef[j];
+               if(consCoef[j] > 0 && varObjCoef+val < ub[index]){
+                   ub[index] = varObjCoef+val;
+               } else if(consCoef[j] < 0 && varObjCoef+val > lb[index]){
+                   lb[index] = varObjCoef+val;
+               }
             }
         }
     }

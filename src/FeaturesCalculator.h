@@ -11,6 +11,7 @@
 #include "scip/def.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
+#include <dlib/matrix.h>
 
 class FeaturesCalculator {
     const int nStaticFeatures;
@@ -43,7 +44,6 @@ class FeaturesCalculator {
     computeSet1StaticFeatures(int signC, SCIP_Var *const *vars, int i, double *features, unsigned int &featureIndex,
                               double &objCoefVari) const;
 
-    void computeSensitivity(SCIP *scip, double *&lb, double *&ub, SCIP_Var **vars, int varsSize);
 public:
     /**
      * Build Feature calculator and compute static features
@@ -68,6 +68,8 @@ public:
 
     const std::vector<double> getFeatures(SCIP_Var *var);
     virtual ~FeaturesCalculator();
+
+    void computeSensitivity(SCIP *scip, double *&lb, double *&ub, SCIP_Var **vars, int varsSize);
 };
 
 
