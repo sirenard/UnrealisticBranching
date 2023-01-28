@@ -55,7 +55,7 @@ public:
     FeaturesCalculator(SCIP *scip, int signB, int signC, int signA);
     void updateBranchCounter(SCIP_NODE **nodes, SCIP_VAR *var);
     void computeDynamicProblemFeatures(SCIP *scip, SCIP_Var** vars, int varsSize);
-    void computeDynamicProblemFeatures(SCIP *scip);
+
     const double* getStaticFeatures(SCIP_VAR *var);
     const double *getDynamicProblemFeatures(SCIP_VAR *var);
     const double* getDynamicOptimizationFeatures(SCIP_VAR *var);
@@ -69,7 +69,15 @@ public:
     const std::vector<double> getFeatures(SCIP_Var *var);
     virtual ~FeaturesCalculator();
 
-    void computeSensitivity(SCIP *scip, double *&lb, double *&ub, SCIP_Var **vars, int varsSize);
+    /**
+     * Compute the sensitivity range of the variables in vars. All var in vars must be in the basis of the simplex
+     * @param scip
+     * @param lb lb[i] = lower bound for the coefficient of variable vars[i]. Must be of size at least varsSize
+     * @param ub ub[i] = upper bound for the coefficient of variable vars[i]. Must be of size at least varsSize
+     * @param vars Array of vars
+     * @param varsSize Size of vars
+     */
+    void computeSensitivity(SCIP *scip, double *lb, double *ub, SCIP_Var **vars, int varsSize);
 };
 
 

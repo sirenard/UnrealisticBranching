@@ -260,8 +260,8 @@ void FeaturesCalculator::updateBranchCounter(SCIP_NODE **nodes, SCIP_VAR *var) {
 void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip, SCIP_Var **vars, int varsSize) {
     SCIP_Var **allVars = SCIPgetVars(scip);
 
-    double* lb;
-    double* ub;
+    double* lb = new double[varsSize];
+    double* ub = new double[varsSize];
     computeSensitivity(scip, lb, ub, vars, varsSize);
 
     // count number of fixed variables
@@ -286,17 +286,13 @@ void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip, SCIP_Var **va
             features[3] = lb[i]/ varObjCoef;
             features[4] = ub[i]/ varObjCoef;
         } else{
-            features[3] = 0;
-            features[4] = 0;
+            features[3] = lb[i];
+            features[4] = ub[i];
         }
     }
 
     delete[] lb;
     delete[] ub;
-}
-
-void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip) {
-    computeDynamicProblemFeatures(scip, SCIPgetVars(scip), nvars);
 }
 
 const double *FeaturesCalculator::getStaticFeatures(SCIP_VAR *var) {
@@ -347,16 +343,13 @@ const std::vector<double> FeaturesCalculator::getFeatures(SCIP_Var *var) {
     return res;
 }
 
-void FeaturesCalculator::computeSensitivity(SCIP *scip, double *&lb, double *&ub, SCIP_Var **vars, int varsSize) {
+void FeaturesCalculator::computeSensitivity(SCIP *scip, double *lb, double *ub, SCIP_Var **vars, int varsSize) {
     int nrows=SCIPgetNLPRows(scip);
     int ncols=SCIPgetNLPCols(scip);
     SCIP_Var** allvars = SCIPgetVars(scip);
 
-    lb = new double[nvars];
-    std::fill(lb, lb+nvars, SCIP_REAL_MIN);
-
-    ub = new double[nvars];
-    std::fill(ub, ub+nvars, SCIP_REAL_MAX);
+    std::fill(lb, lb+varsSize, SCIP_REAL_MIN);
+    std::fill(ub, ub+varsSize, SCIP_REAL_MAX);
 
     double* row = new double[ncols];
     double* redcost = new double[ncols];
@@ -374,7 +367,6 @@ void FeaturesCalculator::computeSensitivity(SCIP *scip, double *&lb, double *&ub
         for(int j=0; j<ncols; ++j){
             if(redcost[j] >= -eps && redcost[j] <= eps)continue; // equals 0
             double val = varobj + redcost[j]/row[j];
-            std::cout << varobj << "+" << redcost[j] << "/" <<row[j] << std::endl;
             if(row[j] < -eps && val > lb[i]){
                 lb[i] = val;
             } else if(row[j] > eps && val < ub[i]){
