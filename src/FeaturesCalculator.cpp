@@ -8,7 +8,6 @@
 
 FeaturesCalculator::FeaturesCalculator(SCIP *scip, int signB, int signC, int signA) :
         nStaticFeatures(1 + (signC==0) + 2*(1+(signB==0)) + 2*(1+(signC==0)) + 2*(1+3*(signA==0))),
-        nfeatures(nStaticFeatures),
         varnameIndexMap(),
         staticFeaturesMap(),
         dynamicFeaturesMap(),
@@ -20,17 +19,23 @@ FeaturesCalculator::FeaturesCalculator(SCIP *scip, int signB, int signC, int sig
     SCIP_Cons **conss = SCIPgetOrigConss(scip);
 
     SCIP_Real *consCoefTemp = new SCIP_Real[nvars];
-    //SCIPallocBufferArray(scip, &consCoefTemp, nvars);
     SCIP_Real *consCoef =new SCIP_Real[nvars];
-    //SCIPallocBufferArray(scip, &consCoef, nvars);
     SCIP_Var **consVars = new SCIP_Var*[nvars];
-    //SCIPallocBufferArray(scip, &consVars, nvars);
 
+    sumObjCoefs[0]=0;
+    sumObjCoefs[1]=0;
     for(int i=0; i<nvars; ++i){
         varnameIndexMap[SCIPvarGetName(vars[i])] = i;
+
+        double varObjCoef = SCIPvarGetObj(vars[i]);
+        if(varObjCoef > 0){
+            sumObjCoefs[0] += varObjCoef;
+        } else{
+            sumObjCoefs[1] += -varObjCoef;
+        }
     }
 
-    // compute features for evey variable i
+    // compute features for every variable i
     for(int i=0; i<nvars; ++i){
         unsigned featureIndex = 0;
 
@@ -47,9 +52,9 @@ FeaturesCalculator::FeaturesCalculator(SCIP *scip, int signB, int signC, int sig
 
         numberBrchMap[varName] = 0;
 
-        double objCoefVari= SCIPvarGetObj(vars[i]);// compute first set of static features |c_i| / sum_j(c_j) (2 features)
+        double objCoefVari= SCIPvarGetObj(vars[i]);
 
-        computeSet1StaticFeatures(signC, vars, i, features, featureIndex, objCoefVari);
+        computeSet1StaticFeatures(signC, features, featureIndex, objCoefVari);
 
         // compute second set of features
         //init features array to compute min/max
@@ -105,28 +110,20 @@ FeaturesCalculator::FeaturesCalculator(SCIP *scip, int signB, int signC, int sig
         }
     }
 
-    /*SCIPfreeBufferArray(scip, &consVars);
-    SCIPfreeBufferArray(scip, &consCoef);
-    SCIPfreeBufferArray(scip, &consCoefTemp);*/
     delete[] consVars;
     delete[] consCoef;
     delete[] consCoefTemp;
 
 }
 
-void FeaturesCalculator::computeSet1StaticFeatures(int signC, SCIP_Var *const *vars, int i, double *features,
-                                                   unsigned int &featureIndex, double &objCoefVari) const {
-    for(int j=0; j < nvars; ++j){
-        double objCoef = SCIPvarGetObj(vars[j]);
-        features[featureIndex + (objCoef<0 && signC==0)] += std::abs(objCoef);
-    }
+void FeaturesCalculator::computeSet1StaticFeatures(int signC, double *features, unsigned int &featureIndex,
+                                                   double &objCoefVari) const {
     for(int k: {0, 1}) {
         if(signC!=0 && k==1)continue;
-        features[featureIndex] = std::abs(objCoefVari) / features[featureIndex];
+        int idx = (signC>=0)?k:1;
+        features[featureIndex] = std::abs(objCoefVari) / sumObjCoefs[idx];
         ++featureIndex;
     }
-    /////
-
 }
 
 void FeaturesCalculator::computeM3Features(int signA, const double *consCoef, int i, unsigned int featureIndex,

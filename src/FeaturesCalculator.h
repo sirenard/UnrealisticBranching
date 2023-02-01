@@ -17,7 +17,8 @@ class FeaturesCalculator {
     const int nStaticFeatures;
     const int nDynamicFeatures = 5;
     const int nObjectiveIncreaseStatics = 5;
-    const int nfeatures;
+
+    double sumObjCoefs[2]; // sum of positive c_i and absolute sum if negative c_i
 
     std::map<std::string , int> varnameIndexMap;
     std::map<std::string , double*> staticFeaturesMap;
@@ -41,7 +42,7 @@ class FeaturesCalculator {
                            int indexOffset, int &localIndexOffset, double &val) const;
 
     void
-    computeSet1StaticFeatures(int signC, SCIP_Var *const *vars, int i, double *features, unsigned int &featureIndex,
+    computeSet1StaticFeatures(int signC, double *features, unsigned int &featureIndex,
                               double &objCoefVari) const;
 
 public:
