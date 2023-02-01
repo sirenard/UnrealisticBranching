@@ -32,7 +32,7 @@ DatasetWriter::addNode(SCIP *scip, SCIP_NODE **node, int nlpcands, int *varScore
         }
 
         SCIP_VAR* var = lpcands[i];
-        writeLine(var, score);
+        writeLine(var, score, scip);
     }
 
     featuresCalculator->updateBranchCounter(node, lpcands[bestCand]);
@@ -44,7 +44,7 @@ DatasetWriter::~DatasetWriter() {
     //nodeSelectionStream.close();
 }
 
-void DatasetWriter::writeLine(SCIP_VAR *var, double score) {
+void DatasetWriter::writeLine(SCIP_VAR *var, double score, SCIP *scip) {
     // TODO: use getFeatures instead
     int arraySizes[3] = {
         featuresCalculator->getNStaticFeatures(),
@@ -52,7 +52,7 @@ void DatasetWriter::writeLine(SCIP_VAR *var, double score) {
         featuresCalculator->getNObjectiveIncreaseStatics()
     };
     const double* features[3] = {
-            featuresCalculator->getStaticFeatures(var),
+            featuresCalculator->getStaticFeatures(var, scip),
             featuresCalculator->getDynamicProblemFeatures(var),
             featuresCalculator->getDynamicOptimizationFeatures(var)
     };

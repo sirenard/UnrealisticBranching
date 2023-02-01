@@ -81,10 +81,10 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
     }
 
     /* for column generation instances, disable restarts */
-    SCIP_CALL(SCIPsetIntParam(scip, "presolving/maxrestarts", 0));
-    SCIP_CALL(SCIPsetIntParam(scip, "presolving/maxrounds", 0));
-    SCIP_CALL(SCIPsetIntParam(scip, "limits/restarts", 0));
-    SCIP_CALL( SCIPsetBoolParam(scip, "lp/presolving", FALSE) );
+    //SCIP_CALL(SCIPsetIntParam(scip, "presolving/maxrestarts", 0));
+    //SCIP_CALL(SCIPsetIntParam(scip, "presolving/maxrounds", 0));
+    //SCIP_CALL(SCIPsetIntParam(scip, "limits/restarts", 0));
+    //SCIP_CALL( SCIPsetBoolParam(scip, "lp/presolving", FALSE) );
     //SCIP_CALL(SCIPsetIntParam(scip, "lp/solutionpolishing", 0));
     //SCIP_CALL(SCIPsetIntParam(scip, "lp/scaling", 0));
 
@@ -100,19 +100,19 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
     //SCIP_CALL( SCIPsetIntParam(scip,"nodeselection/dfs/stdpriority",9000000) );
     //SCIP_CALL(SCIPsetIntParam(scip, "propagating/maxroundsroot", 0));
     //SCIP_CALL( SCIPsetIntParam(scip,"propagating/maxrounds",0) );
-    SCIP_CALL(SCIPsetIntParam(scip, "lp/disablecutoff", 1));
+    //SCIP_CALL(SCIPsetIntParam(scip, "lp/disablecutoff", 1));
 
     //SCIP_CALL(SCIPsetIntParam(scip, "lp/solvefreq", 1));
-    SCIP_CALL(SCIPsetIntParam(scip, "lp/threads", 1));
+    //SCIP_CALL(SCIPsetIntParam(scip, "lp/threads", 1));
     //SCIP_CALL( SCIPsetLongintParam(scip,"lp/iterlim",1) );
     //SCIP_CALL( SCIPsetLongintParam(scip,"lp/rootiterlim",1) );
 
-    SCIP_CALL(SCIPsetIntParam(scip, "separating/maxruns", 0));
-    SCIP_CALL(SCIPsetIntParam(scip, "pricing/maxvars", 1));
-    SCIP_CALL(SCIPsetIntParam(scip, "pricing/maxvarsroot", 1));
+    //SCIP_CALL(SCIPsetIntParam(scip, "separating/maxruns", 0));
+    //SCIP_CALL(SCIPsetIntParam(scip, "pricing/maxvars", 1));
+    //SCIP_CALL(SCIPsetIntParam(scip, "pricing/maxvarsroot", 1));
 
-    SCIP_CALL(SCIPsetBoolParam(scip, "benders/copybenders", FALSE));
-    SCIP_CALL(SCIPsetBoolParam(scip, "benders/cutlpsol", FALSE));
+    //SCIP_CALL(SCIPsetBoolParam(scip, "benders/copybenders", FALSE));
+    //SCIP_CALL(SCIPsetBoolParam(scip, "benders/cutlpsol", FALSE));
 
     /*SCIP_CALL(SCIPsetBoolParam(scip, "randomization/permuteconss", FALSE));
     SCIP_CALL(SCIPsetIntParam(scip, "randomization/lpseed", 12));

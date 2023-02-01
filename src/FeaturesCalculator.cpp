@@ -8,18 +8,30 @@
 
 FeaturesCalculator::FeaturesCalculator(SCIP *scip, int signB, int signC, int signA) :
         nStaticFeatures(1 + (signC==0) + 2*(1+(signB==0)) + 2*(1+(signC==0)) + 2*(1+3*(signA==0))),
+        signA(signA),
+        signB(signB),
+        signC(signC),
         varnameIndexMap(),
-        staticFeaturesMap(),
-        dynamicFeaturesMap(),
-        numberBrchMap(),
+        dynamicFeatures(),
+        numberBrchs(),
         nvars(SCIPgetNVars(scip)),
         nbrchs(0){
     SCIP_Var **vars = SCIPgetVars(scip);
 
+    staticFeatures = new double*[nvars];
+    dynamicFeatures = new double*[nvars];
+    objectiveIncreaseStaticsMap = new double*[nvars];
+    numberBrchs = new int[nvars];
+    std::fill(staticFeatures, staticFeatures + nvars, nullptr);
+    std::fill(dynamicFeatures, dynamicFeatures + nvars, nullptr);
+    std::fill(numberBrchs, numberBrchs + nvars, 0);
+
     sumObjCoefs[0]=0;
     sumObjCoefs[1]=0;
     for(int i=0; i<nvars; ++i){
-        varnameIndexMap[SCIPvarGetName(vars[i])] = i;
+        varnameIndexMap[SCIPvarGetIndex(vars[i])] = i;
+        dynamicFeatures[i] = new double[nDynamicFeatures];
+        objectiveIncreaseStaticsMap[i] = new double[nObjectiveIncreaseStatics];
 
         double varObjCoef = SCIPvarGetObj(vars[i]);
         if(varObjCoef > 0){
@@ -28,14 +40,9 @@ FeaturesCalculator::FeaturesCalculator(SCIP *scip, int signB, int signC, int sig
             sumObjCoefs[1] += -varObjCoef;
         }
     }
-
-    // compute features for every variable i
-    for(int i=0; i<nvars; ++i){
-        computStaticFeatures(scip, signB, signC, signA, i);
-    }
 }
 
-void FeaturesCalculator::computStaticFeatures(SCIP *scip, int signB, int signC, int signA, int i) {
+void FeaturesCalculator::computStaticFeatures(SCIP *scip, int i) {
     SCIP_Var **vars = SCIPgetVars(scip);
     int nconss = SCIPgetNOrigConss(scip);
     SCIP_Cons **conss = SCIPgetOrigConss(scip);
@@ -50,18 +57,16 @@ void FeaturesCalculator::computStaticFeatures(SCIP *scip, int signB, int signC, 
     std::fill(features, features + nStaticFeatures, 0);
     //SCIPallocBlockMemoryArray(scipmain, &features, nfeatures);
 
-    //staticFeaturesMap.insert(std::pair<const char*, const double*>(SCIPvarGetName(vars[i]), features));
-    std::string varName = "t_" + std::string(SCIPvarGetName(vars[i]));
-    staticFeaturesMap[varName] = features;
-    dynamicFeaturesMap[varName] = new double[nDynamicFeatures];
-    objectiveIncreaseStaticsMap[varName] = new double[nObjectiveIncreaseStatics];
-    std::fill(objectiveIncreaseStaticsMap[varName], objectiveIncreaseStaticsMap[varName] + nObjectiveIncreaseStatics, 0);
+    //staticFeatures.insert(std::pair<const char*, const double*>(SCIPvarGetName(vars[i]), features));
+    int index = varnameIndexMap[SCIPvarGetIndex(vars[i])];
+    staticFeatures[i] = features;
+    std::fill(objectiveIncreaseStaticsMap[index], objectiveIncreaseStaticsMap[index] + nObjectiveIncreaseStatics, 0);
 
-    numberBrchMap[varName] = 0;
+    numberBrchs[index] = 0;
 
     double objCoefVari= SCIPvarGetObj(vars[i]);
 
-    computeSet1StaticFeatures(signC, features, featureIndex, objCoefVari);
+    computeSet1StaticFeatures(features, featureIndex, objCoefVari);
 
     // compute second set of features
 //init features array to compute min/max
@@ -83,7 +88,7 @@ void FeaturesCalculator::computStaticFeatures(SCIP *scip, int signB, int signC, 
 
         for(int k=0; k < nvars; ++k){
             if(consVars[k]){
-                int index = varnameIndexMap[SCIPvarGetName(consVars[k])];
+                int index = varnameIndexMap[SCIPvarGetIndex(consVars[k])];
                 consCoef[index] = consCoefTemp[k];
             }
         }
@@ -95,16 +100,16 @@ void FeaturesCalculator::computStaticFeatures(SCIP *scip, int signB, int signC, 
         }
         int localIndexOffset;
         double val;
-        computeM1Features(signB, consCoef, i, featureIndex, features, bj);
+        computeM1Features(consCoef, i, featureIndex, features, bj);
 
         int indexOffset = 2*(1+(signB==0));
-        computeM2Features(signC, consCoef, i, featureIndex, features, objCoefVari, val,
+        computeM2Features(consCoef, i, featureIndex, features, objCoefVari, val,
                           indexOffset);
 
-        //SCIPdebugMessagePrint(scipmain, (varName + ", cons: " + std::to_string(j) + " -> " + std::to_string(features[3] == 1.7976931348623157e+308) + "\n").c_str());
+        //SCIPdebugMessagePrint(scipmain, (index + ", cons: " + std::to_string(j) + " -> " + std::to_string(features[3] == 1.7976931348623157e+308) + "\n").c_str());
 
         indexOffset += 2*(1+(signC==0));
-        computeM3Features(signA, consCoef, i, featureIndex, features, indexOffset, localIndexOffset, val);
+        computeM3Features(consCoef, i, featureIndex, features, indexOffset, localIndexOffset, val);
     }
 
     // Every unmodified field is set to 0
@@ -121,7 +126,7 @@ void FeaturesCalculator::computStaticFeatures(SCIP *scip, int signB, int signC, 
     delete[] consCoefTemp;
 }
 
-void FeaturesCalculator::computeSet1StaticFeatures(int signC, double *features, unsigned int &featureIndex,
+void FeaturesCalculator::computeSet1StaticFeatures(double *features, unsigned int &featureIndex,
                                                    double &objCoefVari) const {
     for(int k: {0, 1}) {
         if(signC!=0 && k==1)continue;
@@ -131,9 +136,8 @@ void FeaturesCalculator::computeSet1StaticFeatures(int signC, double *features, 
     }
 }
 
-void FeaturesCalculator::computeM3Features(int signA, const double *consCoef, int i, unsigned int featureIndex,
-                                           double *features, int indexOffset, int &localIndexOffset,
-                                           double &val) const {
+void FeaturesCalculator::computeM3Features(const double *consCoef, int i, unsigned int featureIndex, double *features,
+                                           int indexOffset, int &localIndexOffset, double &val) const {
     // compute M3 -> M3++ M3+- M3-+ M3-- (8 features)
     if(signA==0)
         localIndexOffset = 2 * (consCoef[i] < 0);
@@ -167,7 +171,7 @@ void FeaturesCalculator::computeM3Features(int signA, const double *consCoef, in
 
 }
 
-void FeaturesCalculator::computeM2Features(int signC, const double *consCoef, int i, unsigned int featureIndex,
+void FeaturesCalculator::computeM2Features(const double *consCoef, int i, unsigned int featureIndex,
                                            double *features, double objCoefVari, double val, int indexOffset) const {
     // compute M2 (4 features) |c_i|/A_ji
     val = std::abs(objCoefVari) / consCoef[i];
@@ -186,8 +190,8 @@ void FeaturesCalculator::computeM2Features(int signC, const double *consCoef, in
     }
 }
 
-void FeaturesCalculator::computeM1Features(int signB, const double *consCoef, int i, unsigned int featureIndex,
-                                           double *features, double bj) const {// compute M1 (4 features)
+void FeaturesCalculator::computeM1Features(const double *consCoef, int i, unsigned int featureIndex, double *features,
+                                           double bj) const {// compute M1 (4 features)
 // TODO: M1- utils if c_j >= 0 for all j ???? Maybe less features for this types of problems. Same reflexion for other features set
     int localIndexOffset=0;
     if(signB==0)
@@ -204,18 +208,23 @@ void FeaturesCalculator::computeM1Features(int signB, const double *consCoef, in
 }
 
 FeaturesCalculator::~FeaturesCalculator() {
-    std::map<std::string, double*>::iterator it;
-    for (it = staticFeaturesMap.begin(); it != staticFeaturesMap.end(); it++){
-        delete[] it->second;
+    //std::map<std::string, double*>::iterator it;
+    for (int i=0; i<nvars; ++i){
+        delete[] staticFeatures[i];
+        delete[] dynamicFeatures[i];
+        delete[] objectiveIncreaseStaticsMap[i];
     }
+    delete[] staticFeatures;
+    delete[] dynamicFeatures;
+    delete[] objectiveIncreaseStaticsMap;
 
-    for (it = dynamicFeaturesMap.begin(); it != dynamicFeaturesMap.end(); it++){
+    /*for (it = dynamicFeatures.begin(); it != dynamicFeatures.end(); it++){
         delete[] it->second;
     }
 
     for (it = objectiveIncreaseStaticsMap.begin(); it != objectiveIncreaseStaticsMap.end(); it++){
         delete[] it->second;
-    }
+    }*/
 }
 
 void FeaturesCalculator::updateBranchCounter(SCIP_NODE **nodes, SCIP_VAR *var) {
@@ -229,10 +238,10 @@ void FeaturesCalculator::updateBranchCounter(SCIP_NODE **nodes, SCIP_VAR *var) {
 
     increase /= parentObj;
 
-    std::string key = std::string(SCIPvarGetName(var));
-    int n = numberBrchMap[key] + 1;
-    numberBrchMap[key] = n ;
-    double* statistics = objectiveIncreaseStaticsMap[key];
+    int index = varnameIndexMap[SCIPvarGetIndex(var)];
+    int n = numberBrchs[index] + 1;
+    numberBrchs[index] = n ;
+    double* statistics = objectiveIncreaseStaticsMap[index];
 
     // update min/max
     if(increase < statistics[0] || n == 1){
@@ -255,7 +264,7 @@ void FeaturesCalculator::updateBranchCounter(SCIP_NODE **nodes, SCIP_VAR *var) {
     }
 
     nbrchs++;
-    statistics[4] = (double)numberBrchMap[key] / nbrchs;
+    statistics[4] = (double)numberBrchs[index] / nbrchs;
 }
 
 
@@ -274,8 +283,8 @@ void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip, SCIP_Var **va
     }
 
     for(int i=0; i<varsSize; ++i){
-        std::string key = std::string(SCIPvarGetName(vars[i]));
-        auto* features = dynamicFeaturesMap[key];
+        int index = varnameIndexMap[SCIPvarGetIndex(vars[i])];
+        auto* features = dynamicFeatures[index];
         features[0] = (double)nFixedVar/nvars;
 
         // up and down fractionalities of the variable
@@ -297,16 +306,23 @@ void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip, SCIP_Var **va
     delete[] ub;
 }
 
-const double *FeaturesCalculator::getStaticFeatures(SCIP_VAR *var) {
-    return staticFeaturesMap[SCIPvarGetName(var)];
+const double *FeaturesCalculator::getStaticFeatures(SCIP_VAR *var, SCIP *scip) {
+    int idx = SCIPvarGetProbindex(var);
+    if(staticFeatures[idx] == nullptr){
+        computStaticFeatures(scip, idx);
+    }
+
+    return staticFeatures[idx];
 }
 
 const double *FeaturesCalculator::getDynamicProblemFeatures(SCIP_VAR *var) {
-    return dynamicFeaturesMap[SCIPvarGetName(var)];
+    int index = varnameIndexMap[SCIPvarGetIndex(var)];
+    return dynamicFeatures[index];
 }
 
 const double *FeaturesCalculator::getDynamicOptimizationFeatures(SCIP_VAR *var) {
-    return objectiveIncreaseStaticsMap[SCIPvarGetName(var)];
+    int index = varnameIndexMap[SCIPvarGetIndex(var)];
+    return objectiveIncreaseStaticsMap[index];
 }
 
 const int FeaturesCalculator::getNStaticFeatures() const {
@@ -321,7 +337,7 @@ const int FeaturesCalculator::getNObjectiveIncreaseStatics() const {
     return nObjectiveIncreaseStatics;
 }
 
-const std::vector<double> FeaturesCalculator::getFeatures(SCIP_Var *var) {
+const std::vector<double> FeaturesCalculator::getFeatures(SCIP_Var *var, SCIP *scip) {
     std::vector<double> res;
 
     int arraySizes[3] = {
@@ -330,7 +346,7 @@ const std::vector<double> FeaturesCalculator::getFeatures(SCIP_Var *var) {
             getNObjectiveIncreaseStatics()
     };
     const double* features[3] = {
-            getStaticFeatures(var),
+            getStaticFeatures(var, scip),
             getDynamicProblemFeatures(var),
             getDynamicOptimizationFeatures(var)
     };

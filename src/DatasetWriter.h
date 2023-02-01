@@ -22,7 +22,7 @@ public:
     ~DatasetWriter();
     SCIP_RETCODE addNode(SCIP *scip, SCIP_NODE **node, int nlpcands, int *varScores, SCIP_VAR **lpcands, int bestCand);
 
-    void writeLine(SCIP_VAR *var, double score);
+    void writeLine(SCIP_VAR *var, double score, SCIP *scip);
 
     void setFeaturesCalculator(FeaturesCalculator *featuresCalculator);
 };

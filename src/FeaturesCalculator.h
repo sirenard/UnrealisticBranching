@@ -19,30 +19,31 @@ class FeaturesCalculator {
     const int nObjectiveIncreaseStatics = 5;
 
     double sumObjCoefs[2]; // sum of positive c_i and absolute sum if negative c_i
+    int signA, signB, signC;
 
-    std::map<std::string , int> varnameIndexMap;
-    std::map<std::string , double*> staticFeaturesMap;
-    std::map<std::string , double*> dynamicFeaturesMap;
-    std::map<std::string , int> numberBrchMap;
+    std::map<int , int> varnameIndexMap; // map varindex to position
+    double** staticFeatures;
+    double** dynamicFeatures;
+    int* numberBrchs;
 
     // one entry is composed of:
     // min, max, mean, std
-    std::map<std::string , double*> objectiveIncreaseStaticsMap;
+    double** objectiveIncreaseStaticsMap;
     int nvars;
     int nbrchs; // number of branching
 
     void
-    computeM1Features(int signB, const double *consCoef, int i, unsigned int featureIndex, double *features,
+    computeM1Features(const double *consCoef, int i, unsigned int featureIndex, double *features,
                       double bj) const;
 
-    void computeM2Features(int signC, const double *consCoef, int i, unsigned int featureIndex,
+    void computeM2Features(const double *consCoef, int i, unsigned int featureIndex,
                            double *features, double objCoefVari, double val, int indexOffset) const;
 
-    void computeM3Features(int signA, const double *consCoef, int i, unsigned int featureIndex, double *features,
+    void computeM3Features(const double *consCoef, int i, unsigned int featureIndex, double *features,
                            int indexOffset, int &localIndexOffset, double &val) const;
 
     void
-    computeSet1StaticFeatures(int signC, double *features, unsigned int &featureIndex,
+    computeSet1StaticFeatures(double *features, unsigned int &featureIndex,
                               double &objCoefVari) const;
 
 public:
@@ -57,7 +58,7 @@ public:
     void updateBranchCounter(SCIP_NODE **nodes, SCIP_VAR *var);
     void computeDynamicProblemFeatures(SCIP *scip, SCIP_Var** vars, int varsSize);
 
-    const double* getStaticFeatures(SCIP_VAR *var);
+    const double *getStaticFeatures(SCIP_VAR *var, SCIP *scip);
     const double *getDynamicProblemFeatures(SCIP_VAR *var);
     const double* getDynamicOptimizationFeatures(SCIP_VAR *var);
 
@@ -67,7 +68,7 @@ public:
 
     const int getNObjectiveIncreaseStatics() const;
 
-    const std::vector<double> getFeatures(SCIP_Var *var);
+    const std::vector<double> getFeatures(SCIP_Var *var, SCIP *scip);
     virtual ~FeaturesCalculator();
 
     /**
@@ -80,7 +81,7 @@ public:
      */
     void computeSensitivity(SCIP *scip, double *lb, double *ub, SCIP_Var **vars, int varsSize);
 
-    void computStaticFeatures(SCIP *scip, int signB, int signC, int signA, int i);
+    void computStaticFeatures(SCIP *scip, int i);
 };
 
 
