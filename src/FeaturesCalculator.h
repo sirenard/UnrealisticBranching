@@ -79,6 +79,8 @@ public:
      * @param varsSize Size of vars
      */
     void computeSensitivity(SCIP *scip, double *lb, double *ub, SCIP_Var **vars, int varsSize);
+
+    void computStaticFeatures(SCIP *scip, int signB, int signC, int signA, int i);
 };
 
 
