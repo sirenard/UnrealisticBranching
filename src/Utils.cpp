@@ -77,53 +77,15 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
         SCIP_CALL( SCIPsetIntParam(scip,"branching/unrealistic/priority",0) );
         SCIP_CALL( SCIPsetIntParam(scip,"display/freq",100) );
         SCIP_CALL(     SCIPsetIntParam(scip, "display/verblevel", 0));
-        //SCIP_CALL( SCIPsetRealParam(scipmain,"limits/time",1) );
     }
-
-    /* for column generation instances, disable restarts */
-    //SCIP_CALL(SCIPsetIntParam(scip, "presolving/maxrestarts", 0));
-    //SCIP_CALL(SCIPsetIntParam(scip, "presolving/maxrounds", 0));
-    //SCIP_CALL(SCIPsetIntParam(scip, "limits/restarts", 0));
-    //SCIP_CALL( SCIPsetBoolParam(scip, "lp/presolving", FALSE) );
-    //SCIP_CALL(SCIPsetIntParam(scip, "lp/solutionpolishing", 0));
-    //SCIP_CALL(SCIPsetIntParam(scip, "lp/scaling", 0));
-
-
 
     /* turn off all separation algorithms */
     SCIP_CALL(SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE));
     SCIP_CALL(SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE));
 
-    SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+    //SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
 
-    //SCIP_CALL( SCIPsetIntParam(scip,"nodeselection/random/stdpriority",900000) );
-    //SCIP_CALL( SCIPsetIntParam(scip,"nodeselection/dfs/stdpriority",9000000) );
-    //SCIP_CALL(SCIPsetIntParam(scip, "propagating/maxroundsroot", 0));
-    //SCIP_CALL( SCIPsetIntParam(scip,"propagating/maxrounds",0) );
-    //SCIP_CALL(SCIPsetIntParam(scip, "lp/disablecutoff", 1));
-
-    //SCIP_CALL(SCIPsetIntParam(scip, "lp/solvefreq", 1));
-    //SCIP_CALL(SCIPsetIntParam(scip, "lp/threads", 1));
-    //SCIP_CALL( SCIPsetLongintParam(scip,"lp/iterlim",1) );
-    //SCIP_CALL( SCIPsetLongintParam(scip,"lp/rootiterlim",1) );
-
-    //SCIP_CALL(SCIPsetIntParam(scip, "separating/maxruns", 0));
-    //SCIP_CALL(SCIPsetIntParam(scip, "pricing/maxvars", 1));
-    //SCIP_CALL(SCIPsetIntParam(scip, "pricing/maxvarsroot", 1));
-
-    //SCIP_CALL(SCIPsetBoolParam(scip, "benders/copybenders", FALSE));
-    //SCIP_CALL(SCIPsetBoolParam(scip, "benders/cutlpsol", FALSE));
-
-    /*SCIP_CALL(SCIPsetBoolParam(scip, "randomization/permuteconss", FALSE));
-    SCIP_CALL(SCIPsetIntParam(scip, "randomization/lpseed", 12));
-    SCIP_CALL(SCIPsetIntParam(scip, "randomization/permutationseed", 12));
-    SCIP_CALL(SCIPsetIntParam(scip, "randomization/randomseedshift", 12));
-    SCIP_CALL(SCIPsetIntParam(scip, "branching/random/seed", 12));*/
-
-    //SCIP_CALL( SCIPsetBoolParam(scip, "branching/vanillafullstrong/idempotent", TRUE) );
-    //SCIP_CALL(SCIPsetCharParam(scip, "nodeselection/childsel", 'd'));
-
-    //srand(12);
+    SCIP_CALL(SCIPsetIntParam(scip, "lp/threads", 1));
 
     return SCIP_OKAY;
 }

@@ -40,7 +40,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealisticTrained::scip_execlp) {
     featuresCalculator->computeDynamicProblemFeatures(scip, lpcands, nlpcands);
     // estimate a score for each variable
     for (int i = 0; i < nlpcands; ++i) {
-        std::vector<double> features = featuresCalculator->getFeatures(lpcands[i], nullptr);
+        std::vector<double> features = featuresCalculator->getFeatures(lpcands[i], scip);
         double score = model->predictScore(features);
 
         /*SCIPdebugMsg(scipmain, ( std::to_string(i + 1) + "/" + std::to_string(nlpcands) +
