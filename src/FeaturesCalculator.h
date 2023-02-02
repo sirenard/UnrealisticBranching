@@ -46,6 +46,7 @@ class FeaturesCalculator {
     computeSet1StaticFeatures(double *features, unsigned int &featureIndex,
                               double &objCoefVari) const;
 
+    int getVarKey(SCIP_Var *var);
 public:
     /**
      * Build Feature calculator and compute static features
@@ -81,7 +82,7 @@ public:
      */
     void computeSensitivity(SCIP *scip, double *lb, double *ub, SCIP_Var **vars, int varsSize);
 
-    void computStaticFeatures(SCIP *scip, int i);
+    void computStaticFeatures(SCIP *scip, SCIP_Var *var);
 };
 
 
