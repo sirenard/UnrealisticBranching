@@ -64,7 +64,7 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
 
     bool random = false;
     if(dataWriter != nullptr && depth == 0){
-        random = (double) rand() / double(RAND_MAX) < 0.2;
+        random = (double) rand() / double(RAND_MAX) < 0.0;
     }
     int bestcand;
     int *varScores = nullptr; // store every variable's realNnodes
@@ -98,7 +98,7 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
         // number of nodes
         for(int i=0; i<nlpcands; ++i){
             if(varScores[i] == INT_MAX)continue;
-            varScores[i] -= SCIPgetNNodes(scip);
+            varScores[i] -= SCIPgetNNodes(scip)-1; // rempve the number of already used nodes
         }
         dataWriter->addNode(scip, children, nlpcands, varScores, lpcands, bestcand);
     }

@@ -176,6 +176,9 @@ void FeaturesCalculator::computeM2Features(const double *consCoef, int i, unsign
                                            double *features, double objCoefVari, double val, int indexOffset) const {
     // compute M2 (4 features) |c_i|/A_ji
     val = std::abs(objCoefVari) / consCoef[i];
+    if(consCoef[i]==0){
+        val=0;
+    }
     int localIndexOffset;
 
     if (signC == 0)
@@ -199,7 +202,7 @@ void FeaturesCalculator::computeM1Features(const double *consCoef, int i, unsign
     localIndexOffset = 2 * (bj<0);
 
     double val = consCoef[i] / std::abs(bj);
-    if(consCoef[i] == 0){
+    if(bj == 0){
         val=0;
     }
 
@@ -301,8 +304,8 @@ void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip, SCIP_Var **va
             features[3] = lb[i]/ varObjCoef;
             features[4] = ub[i]/ varObjCoef;
         } else{
-            features[3] = lb[i];
-            features[4] = ub[i];
+            features[3] = 0;
+            features[4] = 0;
         }
     }
 
