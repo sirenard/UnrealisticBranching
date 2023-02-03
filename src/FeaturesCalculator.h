@@ -21,7 +21,7 @@ class FeaturesCalculator {
     double sumObjCoefs[2]; // sum of positive c_i and absolute sum if negative c_i
     int signA, signB, signC;
 
-    std::map<int , int> varnameIndexMap; // map varindex to position
+    std::map<std::string, int> varnameIndexMap; // map varindex to position
     double** staticFeatures;
     double** dynamicFeatures;
     int* numberBrchs;

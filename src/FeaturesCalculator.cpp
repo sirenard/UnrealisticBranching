@@ -29,7 +29,11 @@ FeaturesCalculator::FeaturesCalculator(SCIP *scip, int signB, int signC, int sig
     sumObjCoefs[0]=0;
     sumObjCoefs[1]=0;
     for(int i=0; i<nvars; ++i){
-        varnameIndexMap[i] = i;
+        std::string key = SCIPvarGetName(vars[i]);
+        if(key.find("t_")==0){
+            key.erase(0, 2);
+        }
+        varnameIndexMap[key] = i;
         dynamicFeatures[i] = new double[nDynamicFeatures];
         objectiveIncreaseStaticsMap[i] = new double[nObjectiveIncreaseStatics];
         std::fill(objectiveIncreaseStaticsMap[i], objectiveIncreaseStaticsMap[i] + nObjectiveIncreaseStatics, 0);
@@ -400,7 +404,10 @@ void FeaturesCalculator::computeSensitivity(SCIP *scip, double *lb, double *ub, 
 
 int FeaturesCalculator::getVarKey(SCIP_Var *var) {
     //int colNum = SCIPcolGetLPPos(SCIPvarGetCol(var));
-    int colNum = SCIPvarGetProbindex(var);
-    return varnameIndexMap[colNum];
+    std::string key = SCIPvarGetName(var);
+    if(key.find("t_")==0){
+        key.erase(0, 2);
+    }
+    return varnameIndexMap[key];
 }
 
