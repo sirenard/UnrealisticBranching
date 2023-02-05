@@ -301,8 +301,14 @@ void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip, SCIP_Var **va
 
         double varObjCoef = std::abs(SCIPvarGetObj(vars[i]));
         if(varObjCoef!=0){
-            features[3] = lb[i]/ varObjCoef;
-            features[4] = ub[i]/ varObjCoef;
+            if(lb[i] != SCIP_REAL_MAX && lb[i] != SCIP_REAL_MIN)
+                features[3] = lb[i]/ varObjCoef;
+            else
+                features[3] = 0;
+            if(ub[i] != SCIP_REAL_MAX && ub[i] != SCIP_REAL_MIN)
+                features[3] = ub[i]/ varObjCoef;
+            else
+                features[3] = 0;
         } else{
             features[3] = 0;
             features[4] = 0;
