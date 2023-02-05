@@ -64,7 +64,7 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
 
     bool random = false;
     if(dataWriter != nullptr && depth == 0){
-        random = (double) rand() / double(RAND_MAX) < 0.0;
+        random = (double) rand() / double(RAND_MAX) < 0.1;
     }
     int bestcand;
     int *varScores = nullptr; // store every variable's realNnodes
@@ -93,7 +93,7 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
     *result = SCIP_BRANCHED;
 
 
-    if(dataWriter && depth==0 and !random) {
+    if(dataWriter && depth==0 && !random) {
         // the score must be: how many nodes needed from the current node. Thus remove from each score the current
         // number of nodes
         for(int i=0; i<nlpcands; ++i){
