@@ -27,7 +27,7 @@ DatasetWriter::addNode(SCIP *scip, SCIP_NODE **node, int nlpcands, int *varScore
         double score = (double)(maxScore-varScores[i])/(maxScore-minScore);
 
         SCIP_VAR* var = lpcands[i];
-        writeLine(var, score, scip);
+        writeLine(var, score, scip, varScores[i], minScore, maxScore);
     }
 
     featuresCalculator->updateBranchCounter(node, lpcands[bestCand]);
@@ -39,7 +39,8 @@ DatasetWriter::~DatasetWriter() {
     //nodeSelectionStream.close();
 }
 
-void DatasetWriter::writeLine(SCIP_VAR *var, double score, SCIP *scip) {
+void DatasetWriter::writeLine(SCIP_VAR *var, double score, SCIP *scip, int ubScore, int smallestUbScore,
+                              int biggestUbScore) {
     // TODO: use getFeatures instead
     int arraySizes[3] = {
         featuresCalculator->getNStaticFeatures(),
@@ -61,7 +62,7 @@ void DatasetWriter::writeLine(SCIP_VAR *var, double score, SCIP *scip) {
         }
     }
 
-    line += std::to_string(score) +  "\n";
+    line += std::to_string(score) + ";" + std::to_string(ubScore) + ";" + std::to_string(smallestUbScore) + ";" + std::to_string(biggestUbScore) +  "\n";
 
     branchStream.write(line.c_str(), line.length());
 }
