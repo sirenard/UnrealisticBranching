@@ -43,19 +43,11 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealisticTrained::scip_execlp) {
         std::vector<double> features = featuresCalculator->getFeatures(lpcands[i], scip);
         double score = model->predictScore(features);
 
-        /*SCIPdebugMsg(scipmain, ( std::to_string(i + 1) + "/" + std::to_string(nlpcands) +
-                            " (score: " + std::to_string(score) + ") (var: " + SCIPvarGetName(lpcands[i]) +
-                            ")\n").c_str());*/
-
         if(bestcand == -1 || score > bestScore){
             bestScore = score;
             bestcand = i;
         }
     }
-
-    /*SCIPdebugMsg(scipmain, ("Var to branch: " + std::to_string(bestcand + 1) + "; " +
-                        std::string(SCIPvarGetName(lpcands[bestcand])) + "; Score: " +
-                        std::to_string(bestScore) + "\n").c_str());*/
 
     SCIP_Node* children[2];
     SCIP_CALL( SCIPbranchVar(scip, lpcands[bestcand], &children[0], NULL, &children[1]) );

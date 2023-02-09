@@ -11,7 +11,9 @@ branchStream(){
 }
 
 SCIP_RETCODE
-DatasetWriter::addNode(SCIP *scip, SCIP_NODE **node, int nlpcands, int *varScores, SCIP_VAR **lpcands, int bestCand) {
+DatasetWriter::addNode(SCIP *scip, SCIP_NODE **node, int nlpcands, int *varScores, SCIP_VAR **lpcands, int bestCand,
+                       char scoreMethod,
+                       double alpha) {
     // compute the features
     featuresCalculator->computeDynamicProblemFeatures(scip, lpcands, nlpcands);
     int maxScore=0;
@@ -24,7 +26,18 @@ DatasetWriter::addNode(SCIP *scip, SCIP_NODE **node, int nlpcands, int *varScore
     for(int i=0; i<nlpcands; ++i){
         if(varScores[i] == INT_MAX)continue;
         if(maxScore == minScore)continue;
-        double score = (double)(maxScore-varScores[i])/(maxScore-minScore);
+
+        double score;
+        switch (scoreMethod) {
+            case('c'):
+                score = (double)(maxScore-varScores[i])/(maxScore-minScore);
+                break;
+            case('a'):
+                score = varScores[i] <= (1.0+alpha)*minScore;
+                break;
+            default:
+                score=-1;
+        }
 
         SCIP_VAR* var = lpcands[i];
         writeLine(var, score, scip, varScores[i], minScore, maxScore);
@@ -56,13 +69,17 @@ void DatasetWriter::writeLine(SCIP_VAR *var, double score, SCIP *scip, int ubSco
     std::string line;
 
     for(int i=0; i<3; ++i){
-        //line += "start " + std::to_string(i) + ";";
         for(int k=0; k<arraySizes[i]; ++k){
             line += std::to_string(features[i][k]) + ";";
         }
     }
 
-    line += std::to_string(score) + ";" + std::to_string(ubScore) + ";" + std::to_string(smallestUbScore) + ";" + std::to_string(biggestUbScore) +  "\n";
+    if(score>=0){
+        line += std::to_string(score)+"\n";
+    } else {
+        line += std::to_string(ubScore) + ";" + std::to_string(smallestUbScore) + ";" +
+                std::to_string(biggestUbScore) + "\n";
+    }
 
     branchStream.write(line.c_str(), line.length());
 }

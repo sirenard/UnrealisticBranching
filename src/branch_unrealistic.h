@@ -26,6 +26,10 @@ private:
     std::vector<double>* branchingHistoryValues;
     int branching_count;
 
+    char scoreMethod='c';
+    double alpha=0;
+    double epsilon=0; // diversification factor
+
     SCIP_DECL_BRANCHEXECLP(scip_execlp) override;
 
     /**
@@ -48,6 +52,12 @@ public:
     static void setDataWriter(DatasetWriter *dataWriter);
 
     double *getLeafTimeLimitPtr();
+
+    char* getScoreMethodPtr();
+
+    double* getAlphaPtr();
+
+    double* getEpsPtr();
 
     void fillBranchHistory(int *history, double *values, int size);
 

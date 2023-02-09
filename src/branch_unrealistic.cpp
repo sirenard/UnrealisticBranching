@@ -64,7 +64,7 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
 
     bool random = false;
     if(dataWriter != nullptr && depth == 0){
-        random = (double) rand() / double(RAND_MAX) < 0.1;
+        random = (double) rand() / double(RAND_MAX) < epsilon;
     }
     int bestcand;
     int *varScores = nullptr; // store every variable's realNnodes
@@ -100,7 +100,7 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
             if(varScores[i] == INT_MAX)continue;
             varScores[i] -= SCIPgetNNodes(scip)-1; // rempve the number of already used nodes
         }
-        dataWriter->addNode(scip, children, nlpcands, varScores, lpcands, bestcand);
+        dataWriter->addNode(scip, children, nlpcands, varScores, lpcands, bestcand, scoreMethod, alpha);
     }
 
     delete[] varScores;
@@ -166,4 +166,16 @@ std::vector<int> *Branch_unrealistic::getHistory() {
 
 std::vector<double> *Branch_unrealistic::getBranchingHistoryValues() const {
     return branchingHistoryValues;
+}
+
+char *Branch_unrealistic::getScoreMethodPtr() {
+    return &scoreMethod;
+}
+
+double *Branch_unrealistic::getAlphaPtr() {
+    return &alpha;
+}
+
+double *Branch_unrealistic::getEpsPtr() {
+    return &epsilon;
 }
