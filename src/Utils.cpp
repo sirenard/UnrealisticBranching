@@ -130,11 +130,3 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
 
     return SCIP_OKAY;
 }
-
-SCIP_Retcode Utils::remove_handlers(SCIP *scip) {
-    /*for(const std::string hdlrName:{"linear", "integral"}){
-        SCIP_CALL(SCIPsetIntParam(scip, (std::string("constraints/")+hdlrName+"/propfreq").c_str(), -1));
-        SCIP_CALL(SCIPsetIntParam(scip, (std::string("constraints/")+hdlrName+"/sepafreq").c_str(), -1));
-    }*/
-    return SCIP_OKAY;
-}
