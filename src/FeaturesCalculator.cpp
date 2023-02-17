@@ -6,6 +6,8 @@
 #include <iostream>
 #include "FeaturesCalculator.h"
 
+#define FOR_BRANCH_DIRS(X) for(SCIP_BRANCHDIR dir:{SCIP_BRANCHDIR_DOWNWARDS, SCIP_BRANCHDIR_UPWARDS}){X}
+
 FeaturesCalculator::FeaturesCalculator(SCIP *scip, int signB, int signC, int signA) :
         nStaticFeatures(1 + (signC==0) + 2*(1+(signB==0)) + 2*(1+(signC==0)) + 2*(1+3*(signA==0))),
         signA(signA),
@@ -313,6 +315,9 @@ void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip, SCIP_Var **va
             features[3] = 0;
             features[4] = 0;
         }
+
+        computeHandCraftedFeatures(scip, vars[i], nvars, features);
+
     }
 
     delete[] lb;
@@ -418,5 +423,97 @@ int FeaturesCalculator::getVarKey(SCIP_Var *var) {
         key.erase(0, 2);
     }
     return varnameIndexMap[key];
+}
+
+double FeaturesCalculator::varScore(double s_i, double s_avg) {
+    return 1.0 - (1.0/ (1.0 + s_i/std::max(s_avg, 0.1)));
+}
+
+double FeaturesCalculator::gNormMax(double x) {
+    return std::max(x/(x+1.0), 0.1);
+}
+
+double FeaturesCalculator::relDist(double x, double y) {
+    if(x<0){
+        return 0;
+    } else{
+        return std::abs(x-y)/(std::max(std::abs(x), std::max(std::abs(y), std::pow(10,-10))));
+    }
+}
+
+double FeaturesCalculator::relPos(double z, double x, double y) {
+    return std::abs(x-z)/std::abs(x-y);
+}
+
+void FeaturesCalculator::computeHandCraftedFeatures(SCIP *scip, SCIP_Var *var, int nlpcands, double *features) {
+    int idx = 5;
+    double lpsol = SCIPvarGetLPSol(var);
+    features[idx++] = lpsol;
+    features[idx++] = SCIPvarGetAvgSol(var);
+
+    FOR_BRANCH_DIRS(features[idx++] = 1.0 - (double)(1+SCIPvarGetAvgBranchdepthCurrentRun(var, dir)) / (double)(1+SCIPgetMaxDepth(scip));)
+
+    features[idx++] = varScore(SCIPgetVarConflictScore(scip, var), SCIPgetAvgConflictScore(scip));
+    features[idx++] = varScore(SCIPgetVarConflictlengthScore(scip, var), SCIPgetAvgConflictlengthScore(scip));
+    features[idx++] = varScore(SCIPgetVarAvgInferenceScore(scip, var), SCIPgetAvgInferenceScore(scip));
+    features[idx++] = varScore(SCIPgetVarAvgCutoffScore(scip, var), SCIPgetAvgCutoffScore(scip));
+    features[idx++] = varScore(SCIPgetVarPseudocostScore(scip, var, lpsol), SCIPgetAvgPseudocostScore(scip));
+
+    FOR_BRANCH_DIRS(features[idx++] = (1+SCIPgetVarPseudocostCountCurrentRun(scip, var, dir))/ (1+SCIPgetPseudocostCount(scip, dir, 1));)
+    FOR_BRANCH_DIRS(features[idx++] = (1+SCIPgetVarPseudocostCountCurrentRun(scip, var, dir))/ (1+SCIPvarGetNBranchingsCurrentRun(var, dir));)
+    FOR_BRANCH_DIRS(features[idx++] = (1+SCIPgetVarPseudocostCountCurrentRun(scip, var, dir))/ (1+nbrchs);)
+
+    for(int i:{0,1})(features[idx++] = SCIPvarGetNImpls(var, i));
+
+    FOR_BRANCH_DIRS(features[idx++] = gNormMax(SCIPgetVarAvgCutoffsCurrentRun(scip, var, dir));)
+    FOR_BRANCH_DIRS(features[idx++] = gNormMax(SCIPgetVarAvgConflictlengthCurrentRun(scip, var, dir));)
+    FOR_BRANCH_DIRS(features[idx++] = gNormMax(SCIPgetVarAvgInferencesCurrentRun(scip, var, dir));)
+    // 23
+
+    SCIP_Node* node = SCIPgetCurrentNode(scip);
+    features[idx++] = (double)(1+SCIPnodeGetDepth(node)) / (double) (1+SCIPgetMaxDepth(scip));
+    features[idx++] = (double) (1+SCIPgetPlungeDepth(scip)) / (double) (1+SCIPgetMaxDepth(scip));
+    features[idx++] = relDist(SCIPgetLowerbound(scip), SCIPgetLPObjval(scip));
+    features[idx++] = relDist(SCIPgetLowerboundRoot(scip), SCIPgetLPObjval(scip));
+    features[idx++] = relDist(SCIPgetUpperbound(scip), SCIPgetLPObjval(scip));
+    features[idx++] = relPos(SCIPgetLPObjval(scip), SCIPgetUpperbound(scip), SCIPgetLowerbound(scip));
+    features[idx++] = (double)(1+nlpcands)/(double)(1+nvars-nlpcands);
+
+    int nleaves = SCIPgetNLeaves(scip);
+    int ninternalnodes = SCIPgetNNodes(scip) - nleaves;
+    features[idx++] = (double) (1+SCIPgetNObjlimLeaves(scip))/(double)(1+nleaves);
+    features[idx++] = (double) (1+SCIPgetNInfeasibleLeaves(scip))/(double)(1+nleaves);
+    features[idx++] = (double) (1+SCIPgetNFeasibleLeaves(scip))/(double)(1+nleaves);
+    features[idx++] = (double) (SCIPgetNInfeasibleLeaves(scip)+1)/(double)(SCIPgetNObjlimLeaves(scip)+1);
+    features[idx++] = (double) SCIPgetNNodesLeft(scip)/(double)SCIPgetNNodes(scip);
+    //TODO: ncreatenodes, ninternalnodes, nactivatenodes,...?
+
+    features[idx++] = (double) (1+SCIPgetPlungeDepth(scip))/(double)(1+SCIPgetMaxDepth(scip));
+    features[idx++] = (double) (1+SCIPgetNBacktracks(scip))/(double)(1+SCIPgetNNodes(scip));
+
+    features[idx++] = std::log((double) SCIPgetNLPIterations(scip)/(double)SCIPgetNNodes(scip));
+    features[idx++] = std::log((double) SCIPgetNLPs(scip)/(double)SCIPgetNNodes(scip));
+    features[idx++] = (double)SCIPgetNNodes(scip)/(double) SCIPgetNLPs(scip);
+    features[idx++] = (double)SCIPgetNNodeLPs(scip)/(double) SCIPgetNLPs(scip);
+
+    //TODO: Gap(4)
+
+    features[idx++] = relDist(SCIPgetLowerboundRoot(scip), SCIPgetLowerbound(scip));
+    features[idx++] = relDist(SCIPgetLowerboundRoot(scip), SCIPgetAvgLowerbound(scip));
+    features[idx++] = relDist(SCIPgetUpperbound(scip), SCIPgetLowerbound(scip));
+    features[idx++] = SCIPisPrimalboundSol(scip);
+
+    features[idx++] = gNormMax(SCIPgetAvgConflictScore(scip));
+    features[idx++] = gNormMax(SCIPgetAvgConflictlengthScore(scip));
+    features[idx++] = gNormMax(SCIPgetAvgInferenceScore(scip));
+    features[idx++] = gNormMax(SCIPgetAvgCutoffScore(scip));
+    features[idx++] = gNormMax(SCIPgetAvgPseudocostScore(scip));
+    features[idx++] = gNormMax(SCIPgetAvgCutoffScore(scip));
+    FOR_BRANCH_DIRS(features[idx++] = gNormMax(SCIPgetAvgCutoffs(scip, dir));)
+    FOR_BRANCH_DIRS(features[idx++] = gNormMax(SCIPgetAvgInferences(scip, dir));)
+    FOR_BRANCH_DIRS(features[idx++] = gNormMax(SCIPgetPseudocostVariance(scip, dir, 1));)
+    FOR_BRANCH_DIRS(features[idx++] = gNormMax(SCIPgetNConflictConssApplied(scip));)
+
+    //TODO: Open nodes bounds (12), Open nodes depths (4)
 }
 

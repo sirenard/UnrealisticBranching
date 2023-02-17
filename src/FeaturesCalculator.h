@@ -15,7 +15,7 @@
 
 class FeaturesCalculator {
     const int nStaticFeatures;
-    const int nDynamicFeatures = 5;
+    const int nDynamicFeatures = 5 + 59;
     const int nObjectiveIncreaseStatics = 5;
 
     double sumObjCoefs[2]; // sum of positive c_i and absolute sum if negative c_i
@@ -47,6 +47,14 @@ class FeaturesCalculator {
                               double &objCoefVari) const;
 
     int getVarKey(SCIP_Var *var);
+
+    double varScore(double s_i, double s_avg);
+    double gNormMax(double x);
+    double relDist(double x, double y);
+    double relPos(double z, double x, double y);
+
+    void computeHandCraftedFeatures(SCIP *scip, SCIP_Var *var, int nlpcands, double *features);
+
 public:
     /**
      * Build Feature calculator and compute static features
