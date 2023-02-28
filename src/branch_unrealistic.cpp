@@ -64,7 +64,8 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
 
     bool random = false;
     if(dataWriter != nullptr && depth == 0){
-        random = (double) rand() / double(RAND_MAX) < epsilon;
+        //random = (double) rand() / double(RAND_MAX) < k;
+        random=SCIPgetNNodes(scip) <= k;
     }
     int bestcand;
     int *varScores = nullptr; // store every variable's realNnodes
@@ -176,6 +177,6 @@ double *Branch_unrealistic::getAlphaPtr() {
     return &alpha;
 }
 
-double *Branch_unrealistic::getEpsPtr() {
-    return &epsilon;
+int * Branch_unrealistic::getKPtr() {
+    return &k;
 }
