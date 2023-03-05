@@ -62,21 +62,28 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
 
     for (int i = 0; i < nlpcands; ++i)lpcandsfrac[i] = SCIPvarGetLPSol(lpcands[i]);
 
-    bool random = false;
+    bool exploration = false;
     if(dataWriter != nullptr && depth == 0){
-        random = (double) rand() / double(RAND_MAX) < epsilon;
+        exploration = (double) rand() / double(RAND_MAX) < epsilon;
     }
     int bestcand;
     int *varScores = nullptr; // store every variable's realNnodes
 
-    if(!random) {
+    if(!exploration) {
         if (dataWriter != nullptr && depth == 0)varScores = new int[nlpcands];
         Worker *worker = Worker::getInstance();
         worker->computeScores(scip, lpcands, nlpcands, bestcands, bestScore, depth + 1, maxdepth, leafTimeLimit,
                               dataWriter != nullptr && depth == 0, varScores);
         bestcand = bestcands[rand() % bestcands.size()];
     } else{
-        bestcand = rand()%nlpcands;
+        for(int i=0; i<nlpcands; i++){
+            SCIP_Var* var = lpcands[i];
+            double score = SCIPgetVarPseudocostScore(scip, var, SCIPvarGetLPSol(var));
+            if(score>bestScore || bestScore==-1){
+                bestcand = i;
+                bestScore = score;
+            }
+        }
     }
 
 
@@ -93,7 +100,7 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
     *result = SCIP_BRANCHED;
 
 
-    if(dataWriter && depth==0 && !random) {
+    if(dataWriter && depth==0 && !exploration) {
         // the score must be: how many nodes needed from the current node. Thus remove from each score the current
         // number of nodes
         for(int i=0; i<nlpcands; ++i){

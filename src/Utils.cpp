@@ -95,7 +95,7 @@ SCIP_Retcode Utils::create_scip_instance(SCIP** scipp, bool addBranchScheme) {
             "Random branching is performed with probability epsilon at each step during dataset generation",
             objbranchrule->getEpsPtr(),
             FALSE,
-            0.2,
+            0.3,
             0,
             1,
             NULL,
