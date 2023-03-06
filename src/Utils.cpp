@@ -89,15 +89,15 @@ SCIP_Retcode Utils::create_scip_instance(SCIP** scipp, bool addBranchScheme) {
             NULL
     ));
 
-    SCIP_CALL(SCIPaddIntParam(
+    SCIP_CALL(SCIPaddRealParam(
             scip,
-            "dataset/k",
-            "Random branching is performed on the first k branchings",
-            objbranchrule->getKPtr(),
+            "dataset/epsilon",
+            "Random branching is performed with probability epsilon at each step during dataset generation",
+            objbranchrule->getEpsPtr(),
             FALSE,
-            5,
+            0.3,
             0,
-            200,
+            1,
             NULL,
             NULL
     ));

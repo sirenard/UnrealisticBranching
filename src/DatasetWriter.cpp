@@ -11,8 +11,7 @@ branchStream(){
 }
 
 SCIP_RETCODE
-DatasetWriter::addNode(SCIP *scip, SCIP_NODE **node, int nlpcands, int *varScores, SCIP_VAR **lpcands, int bestCand,
-                       char scoreMethod,
+DatasetWriter::addNode(SCIP *scip, int nlpcands, int *varScores, SCIP_VAR **lpcands, int bestCand, char scoreMethod,
                        double alpha) {
     // compute the features
     featuresCalculator->computeDynamicProblemFeatures(scip, lpcands, nlpcands);
@@ -43,7 +42,6 @@ DatasetWriter::addNode(SCIP *scip, SCIP_NODE **node, int nlpcands, int *varScore
         writeLine(var, score, scip, varScores[i], minScore, maxScore);
     }
 
-    featuresCalculator->updateBranchCounter(node, lpcands[bestCand]);
     return SCIP_OKAY;
 }
 
@@ -86,4 +84,8 @@ void DatasetWriter::writeLine(SCIP_VAR *var, double score, SCIP *scip, int ubSco
 
 void DatasetWriter::setFeaturesCalculator(FeaturesCalculator *featuresCalculator) {
     DatasetWriter::featuresCalculator = featuresCalculator;
+}
+
+void DatasetWriter::informBranching(SCIP_Node **nodes, SCIP_Var *var) {
+    featuresCalculator->updateBranchCounter(nodes, var);
 }

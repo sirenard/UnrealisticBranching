@@ -237,12 +237,12 @@ FeaturesCalculator::~FeaturesCalculator() {
 }
 
 void FeaturesCalculator::updateBranchCounter(SCIP_NODE **nodes, SCIP_VAR *var) {
-    double increase = 0;
+    double increase = 1;
 
     double parentObj = SCIPnodeGetLowerbound(SCIPnodeGetParent(nodes[0]));
     for(auto i:{0,1}){
         double tmp = SCIPnodeGetLowerbound(nodes[i]) - parentObj;
-        if(tmp > increase) increase = tmp;
+        increase *= std::max(tmp, 10e-3);
     }
 
     increase /= parentObj;
