@@ -69,11 +69,11 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
     int bestcand;
     int *varScores = nullptr; // store every variable's realNnodes
 
+
+    if (dataWriter != nullptr && depth == 0)varScores = new int[nlpcands];
+    Worker *worker = Worker::getInstance();
+    worker->computeScores(scip, lpcands, nlpcands, bestcands, bestScore, depth + 1, maxdepth, leafTimeLimit,dataWriter != nullptr && depth == 0, varScores);
     if(!exploration) {
-        if (dataWriter != nullptr && depth == 0)varScores = new int[nlpcands];
-        Worker *worker = Worker::getInstance();
-        worker->computeScores(scip, lpcands, nlpcands, bestcands, bestScore, depth + 1, maxdepth, leafTimeLimit,
-                              dataWriter != nullptr && depth == 0, varScores);
         bestcand = bestcands[rand() % bestcands.size()];
     } else{
         for(int i=0; i<nlpcands; i++){
@@ -103,13 +103,11 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
     if(dataWriter && depth==0 && !exploration) {
         // the score must be: how many nodes needed from the current node. Thus remove from each score the current
         // number of nodes
-        if(!exploration) {
-            for (int i = 0; i < nlpcands; ++i) {
-                if (varScores[i] == INT_MAX)continue;
-                varScores[i] -= SCIPgetNNodes(scip) - 1; // rempve the number of already used nodes
-            }
-            dataWriter->addNode(scip, nlpcands, varScores, lpcands, bestcand, scoreMethod, alpha);
+        for (int i = 0; i < nlpcands; ++i) {
+            if (varScores[i] == INT_MAX)continue;
+            varScores[i] -= SCIPgetNNodes(scip) - 1; // rempve the number of already used nodes
         }
+        dataWriter->addNode(scip, nlpcands, varScores, lpcands, scoreMethod, alpha);
         dataWriter->informBranching(children, lpcands[bestcand]);
     }
 

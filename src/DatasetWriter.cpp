@@ -11,8 +11,7 @@ branchStream(){
 }
 
 SCIP_RETCODE
-DatasetWriter::addNode(SCIP *scip, int nlpcands, int *varScores, SCIP_VAR **lpcands, int bestCand, char scoreMethod,
-                       double alpha) {
+DatasetWriter::addNode(SCIP *scip, int nlpcands, int *varScores, SCIP_VAR **lpcands, char scoreMethod, double alpha) {
     // compute the features
     featuresCalculator->computeDynamicProblemFeatures(scip, lpcands, nlpcands);
     int maxScore=0;
@@ -29,7 +28,8 @@ DatasetWriter::addNode(SCIP *scip, int nlpcands, int *varScores, SCIP_VAR **lpca
         double score;
         switch (scoreMethod) {
             case('c'):
-                score = (double)(maxScore-varScores[i])/(maxScore-minScore);
+                //score = (double)(maxScore-varScores[i])/(maxScore-minScore);
+                score = 1.0 - (double)varScores[i]/maxScore;
                 break;
             case('a'):
                 score = varScores[i] <= (1.0+alpha)*minScore;

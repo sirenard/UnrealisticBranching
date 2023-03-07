@@ -20,8 +20,7 @@ class DatasetWriter {
 public:
     DatasetWriter(const char* nodeSelectionFilename, const char* branchFilename);
     ~DatasetWriter();
-    SCIP_RETCODE addNode(SCIP *scip, int nlpcands, int *varScores, SCIP_VAR **lpcands, int bestCand, char scoreMethod,
-                         double alpha);
+    SCIP_RETCODE addNode(SCIP *scip, int nlpcands, int *varScores, SCIP_VAR **lpcands, char scoreMethod, double alpha);
 
     void informBranching(SCIP_Node** nodes, SCIP_Var* var);
 
