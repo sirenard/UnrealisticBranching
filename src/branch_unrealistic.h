@@ -28,7 +28,7 @@ private:
 
     char scoreMethod='c';
     double alpha=0;
-    int k=0; // diversification factor
+    double epsilon=0; // diversification factor
 
     SCIP_DECL_BRANCHEXECLP(scip_execlp) override;
 
@@ -57,7 +57,7 @@ public:
 
     double* getAlphaPtr();
 
-    int * getKPtr();
+    double * getEpsPtr();
 
     void fillBranchHistory(int *history, double *values, int size);
 
