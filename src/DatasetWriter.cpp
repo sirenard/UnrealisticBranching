@@ -13,7 +13,6 @@ branchStream(){
 SCIP_RETCODE
 DatasetWriter::addNode(SCIP *scip, int nlpcands, int *varScores, SCIP_VAR **lpcands, char scoreMethod, double alpha) {
     // compute the features
-    featuresCalculator->computeDynamicProblemFeatures(scip, lpcands, nlpcands);
     int maxScore=0;
     int minScore=INT_MAX;
     for(int i=0; i<nlpcands; ++i){
@@ -21,6 +20,10 @@ DatasetWriter::addNode(SCIP *scip, int nlpcands, int *varScores, SCIP_VAR **lpca
         if(varScores[i] > maxScore)maxScore=varScores[i];
         if(varScores[i] < minScore)minScore=varScores[i];
     }
+
+    double* nodeFeatures = featuresCalculator->getTreeFeatures(scip, nlpcands);
+    int nodeFeaturesSize = featuresCalculator->getTreeFeaturesSize();
+
     for(int i=0; i<nlpcands; ++i){
         if(varScores[i] == INT_MAX)continue;
         if(maxScore == minScore)continue;
@@ -39,9 +42,10 @@ DatasetWriter::addNode(SCIP *scip, int nlpcands, int *varScores, SCIP_VAR **lpca
         }
 
         SCIP_VAR* var = lpcands[i];
-        writeLine(var, score, scip, varScores[i], minScore, maxScore);
+        writeLine(var, score, scip, varScores[i], minScore, maxScore, nodeFeatures, nodeFeaturesSize);
     }
 
+    delete[] nodeFeatures;
     return SCIP_OKAY;
 }
 
@@ -50,42 +54,40 @@ DatasetWriter::~DatasetWriter() {
     //nodeSelectionStream.close();
 }
 
-void DatasetWriter::writeLine(SCIP_VAR *var, double score, SCIP *scip, int ubScore, int smallestUbScore,
-                              int biggestUbScore) {
+void
+DatasetWriter::writeLine(SCIP_VAR *var, double score, SCIP *scip, int ubScore, int smallestUbScore, int biggestUbScore,
+                         double *nodeFeatures, int nodeFeaturesSize) {
     // TODO: use getFeatures instead
-    int arraySizes[3] = {
-        featuresCalculator->getNStaticFeatures(),
-        featuresCalculator->getNDynamicFeatures(),
-        featuresCalculator->getNObjectiveIncreaseStatics()
-    };
-    const double* features[3] = {
-            featuresCalculator->getStaticFeatures(var, scip),
-            featuresCalculator->getDynamicProblemFeatures(var),
-            featuresCalculator->getDynamicOptimizationFeatures(var)
-    };
+    double* varFeatures = featuresCalculator->getNoTreeFeatures(scip, var);
+    int varFeaturesSize = featuresCalculator->getNoTreeFeaturesSize();
+
 
     std::string line;
 
-    for(int i=0; i<3; ++i){
-        for(int k=0; k<arraySizes[i]; ++k){
-            line += std::to_string(features[i][k]) + ";";
-        }
+    for(int k=0; k<nodeFeaturesSize; ++k){
+        line += std::to_string(nodeFeatures[k]) + ",";
     }
+    for(int k=0; k<varFeaturesSize; ++k){
+        line += std::to_string(varFeatures[k]) + ",";
+    }
+
+
 
     if(score>=0){
         line += std::to_string(score)+"\n";
     } else {
-        line += std::to_string(ubScore) + ";" + std::to_string(smallestUbScore) + ";" +
+        line += std::to_string(ubScore) + "," + std::to_string(smallestUbScore) + "," +
                 std::to_string(biggestUbScore) + "\n";
     }
 
     branchStream.write(line.c_str(), line.length());
+    delete[] varFeatures;
 }
 
 void DatasetWriter::setFeaturesCalculator(FeaturesCalculator *featuresCalculator) {
     DatasetWriter::featuresCalculator = featuresCalculator;
 }
 
-void DatasetWriter::informBranching(SCIP_Node **nodes, SCIP_Var *var) {
-    featuresCalculator->updateBranchCounter(nodes, var);
+void DatasetWriter::informBranching(SCIP *scip) {
+    featuresCalculator->updateBranching(scip);
 }

@@ -22,9 +22,10 @@ public:
     ~DatasetWriter();
     SCIP_RETCODE addNode(SCIP *scip, int nlpcands, int *varScores, SCIP_VAR **lpcands, char scoreMethod, double alpha);
 
-    void informBranching(SCIP_Node** nodes, SCIP_Var* var);
+    void informBranching(SCIP *scip);
 
-    void writeLine(SCIP_VAR *var, double score, SCIP *scip, int ubScore, int smallestUbScore, int biggestUbScore);
+    void writeLine(SCIP_VAR *var, double score, SCIP *scip, int ubScore, int smallestUbScore, int biggestUbScore,
+                   double *nodeFeatures, int nodeFeaturesSize);
 
     void setFeaturesCalculator(FeaturesCalculator *featuresCalculator);
 };

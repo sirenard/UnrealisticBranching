@@ -44,7 +44,7 @@ void RegressionModel::readDataSet(std::vector<sample_type> &x, std::vector<doubl
     int nCol=0;
     std::getline(data, line);
     std::stringstream lineStream(line);
-    while (std::getline(lineStream, cell, ';')) {
+    while (std::getline(lineStream, cell, ',')) {
         ++nCol;
     }
 

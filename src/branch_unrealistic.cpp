@@ -109,7 +109,7 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
             varScores[i] -= SCIPgetNNodes(scip) - 1; // rempve the number of already used nodes
         }
         dataWriter->addNode(scip, nlpcands, varScores, lpcands, scoreMethod, alpha);
-        dataWriter->informBranching(children, lpcands[bestcand]);
+        dataWriter->informBranching(scip);
     }
 
     delete[] varScores;
