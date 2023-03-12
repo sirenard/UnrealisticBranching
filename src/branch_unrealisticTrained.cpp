@@ -38,21 +38,40 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealisticTrained::scip_execlp) {
     SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, nullptr, &lpcandsfrac, nullptr, &nlpcands, nullptr) );
 
     // estimate a score for each variable
+
+    double* nodeFeatures = featuresCalculator->getTreeFeatures(scip, nlpcands);
+    int nodeFeaturesSize = featuresCalculator->getTreeFeaturesSize();
+    int varFeaturesSize = featuresCalculator->getNoTreeFeaturesSize();
+
+    std::vector<double> features(nodeFeaturesSize + varFeaturesSize);
+    for(int k=0;k<nodeFeaturesSize; ++k){
+        features.at(k) = nodeFeatures[k];
+    }
+
     for (int i = 0; i < nlpcands; ++i) {
-        std::vector<double> features = featuresCalculator->getFeatures(lpcands[i], scip);
+        double* varFeatures = featuresCalculator->getNoTreeFeatures(scip, lpcands[i]);
+
+        for(int k=0;k<varFeaturesSize; ++k){
+            features.at(nodeFeaturesSize+k) = varFeatures[k];
+        }
+
         double score = model->predictScore(features);
 
         if(bestcand == -1 || score > bestScore){
             bestScore = score;
             bestcand = i;
         }
+
+        delete[] varFeatures;
     }
+
 
     SCIP_Node* children[2];
     SCIP_CALL( SCIPbranchVar(scip, lpcands[bestcand], &children[0], NULL, &children[1]) );
     *result = SCIP_BRANCHED;
 
     featuresCalculator->updateBranching(scip);
+    delete[] nodeFeatures;
     return SCIP_OKAY;
 }
 
