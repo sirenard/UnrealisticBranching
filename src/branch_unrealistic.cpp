@@ -76,12 +76,13 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
     if(!exploration) {
         bestcand = bestcands[rand() % bestcands.size()];
     } else{
+        double pscostBestScore = -1;
         for(int i=0; i<nlpcands; i++){
             SCIP_Var* var = lpcands[i];
             double score = SCIPgetVarPseudocostScore(scip, var, SCIPvarGetLPSol(var));
-            if(score>bestScore || bestScore==-1){
+            if(score>pscostBestScore || pscostBestScore==-1){
                 bestcand = i;
-                bestScore = score;
+                pscostBestScore = score;
             }
         }
     }
