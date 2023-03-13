@@ -71,6 +71,7 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
 
 
     if (dataWriter != nullptr && depth == 0)varScores = new int[nlpcands];
+    dataWriter->informBranching(scip);
     Worker *worker = Worker::getInstance();
     worker->computeScores(scip, lpcands, nlpcands, bestcands, bestScore, depth + 1, maxdepth, leafTimeLimit,dataWriter != nullptr && depth == 0, varScores);
     if(!exploration) {
@@ -109,7 +110,6 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
             varScores[i] -= SCIPgetNNodes(scip) - 1; // rempve the number of already used nodes
         }
         dataWriter->addNode(scip, nlpcands, varScores, lpcands, scoreMethod, alpha);
-        dataWriter->informBranching(scip);
     }
 
     delete[] varScores;

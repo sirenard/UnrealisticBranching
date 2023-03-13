@@ -37,6 +37,8 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealisticTrained::scip_execlp) {
     // get branching candidates
     SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, nullptr, &lpcandsfrac, nullptr, &nlpcands, nullptr) );
 
+    featuresCalculator->updateBranching(scip);
+
     // estimate a score for each variable
 
     double* nodeFeatures = featuresCalculator->getTreeFeatures(scip, nlpcands);
@@ -70,7 +72,6 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealisticTrained::scip_execlp) {
     SCIP_CALL( SCIPbranchVar(scip, lpcands[bestcand], &children[0], NULL, &children[1]) );
     *result = SCIP_BRANCHED;
 
-    featuresCalculator->updateBranching(scip);
     delete[] nodeFeatures;
     return SCIP_OKAY;
 }

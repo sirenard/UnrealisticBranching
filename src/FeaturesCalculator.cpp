@@ -82,7 +82,7 @@ double *FeaturesCalculator::getNoTreeFeatures(SCIP *scip, SCIP_Var *var) {
 
     for(int i:{0,1})features[idx++] = SCIPvarGetNImpls(var, i);
 
-    for(int i:{0,1})features[idx++] = (double)SCIPvarGetNCliques(var, i) / SCIPgetNCliques(scip);
+    for(int i:{0,1})features[idx++] = (1.0+SCIPvarGetNCliques(var, i)) / (1.0+SCIPgetNCliques(scip));
     FOR_BRANCH_DIRS(features[idx++] = gNormMax(SCIPgetVarAvgCutoffsCurrentRun(scip, var, dir));)
     FOR_BRANCH_DIRS(features[idx++] = gNormMax(SCIPgetVarAvgConflictlengthCurrentRun(scip, var, dir));)
     FOR_BRANCH_DIRS(features[idx++] = gNormMax(SCIPgetVarAvgInferencesCurrentRun(scip, var, dir));)
@@ -166,7 +166,7 @@ double *FeaturesCalculator::getTreeFeatures(SCIP *scip, int nlpcands) {
     features[idx++] = open_lbs_std / open_lbs_mean;
     features[idx++] = 0; // TODO
 
-    features[idx++] = (1.0+open_ds_mean)/ (1.0+SCIPgetMaxDepth(scip));
+    features[idx++] = (double)open_ds_mean/ (1.0+SCIPgetMaxDepth(scip));
     features[idx++] = 0; // TODO
     features[idx++] = open_ds_std / open_ds_mean;
     features[idx++] = 0; // TODO
