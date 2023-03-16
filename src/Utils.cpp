@@ -108,13 +108,13 @@ SCIP_Retcode Utils::create_scip_instance(SCIP** scipp, bool addBranchScheme) {
 
 SCIP_Retcode Utils::configure_scip_instance(SCIP *scip, bool addBranchScheme) {
     if(addBranchScheme) {
-        SCIP_CALL( SCIPsetIntParam(scip,"branching/unrealistic/priority",536870911) );
-        SCIP_CALL( SCIPsetIntParam(scip,"branching/vanillafullstrong/priority",536870900) );
+        SCIP_CALL( SCIPsetIntParam(scip,"branching/unrealistic/priority",100000) );
+        SCIP_CALL( SCIPsetIntParam(scip,"branching/vanillafullstrong/priority",50000) );
         SCIP_CALL( SCIPsetIntParam(scip,"display/freq",1) );
         SCIP_CALL( SCIPsetRealParam(scip,"limits/time",1e+20) );
 
     } else{
-        SCIP_CALL( SCIPsetIntParam(scip,"branching/vanillafullstrong/priority",536870911) );
+        SCIP_CALL( SCIPsetIntParam(scip,"branching/vanillafullstrong/priority",100000) );
         SCIP_CALL( SCIPsetIntParam(scip,"branching/unrealistic/priority",0) );
         SCIP_CALL( SCIPsetIntParam(scip,"display/freq",100) );
         SCIP_CALL(     SCIPsetIntParam(scip, "display/verblevel", 0));

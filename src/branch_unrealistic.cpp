@@ -62,32 +62,21 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
 
     for (int i = 0; i < nlpcands; ++i)lpcandsfrac[i] = SCIPvarGetLPSol(lpcands[i]);
 
-    bool exploration = false;
     if(dataWriter != nullptr && depth == 0){
-        exploration = (double) rand() / double(RAND_MAX) < epsilon;
+        dataWriter->informBranching(scip); // update dataWriters for  features computation
+        if((double) rand() / RAND_MAX < epsilon){ // do exploration by not running UB but the next one (with a smaller priority)
+            *result=  SCIP_DIDNOTRUN;
+            return SCIP_OKAY;
+        }
     }
     int bestcand;
     int *varScores = nullptr; // store every variable's realNnodes
 
 
     if (dataWriter != nullptr && depth == 0)varScores = new int[nlpcands];
-    dataWriter->informBranching(scip);
     Worker *worker = Worker::getInstance();
     worker->computeScores(scip, lpcands, nlpcands, bestcands, bestScore, depth + 1, maxdepth, leafTimeLimit,dataWriter != nullptr && depth == 0, varScores);
-    if(!exploration) {
-        bestcand = bestcands[rand() % bestcands.size()];
-    } else{
-        double pscostBestScore = -1;
-        for(int i=0; i<nlpcands; i++){
-            SCIP_Var* var = lpcands[i];
-            double score = SCIPgetVarPseudocostScore(scip, var, SCIPvarGetLPSol(var));
-            if(score>pscostBestScore || pscostBestScore==-1){
-                bestcand = i;
-                pscostBestScore = score;
-            }
-        }
-    }
-
+    bestcand = bestcands[rand() % bestcands.size()];
 
     if (!depth) {
         SCIPdebugMsg(scip, ("Var to branch: " + std::to_string(bestcand + 1) + "; " +
@@ -102,7 +91,7 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
     *result = SCIP_BRANCHED;
 
 
-    if(dataWriter && depth==0 && !exploration) {
+    if(dataWriter && depth==0) {
         // the score must be: how many nodes needed from the current node. Thus remove from each score the current
         // number of nodes
         for (int i = 0; i < nlpcands; ++i) {
