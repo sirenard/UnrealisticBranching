@@ -52,6 +52,10 @@ void RegressionModel::readDataSet(std::vector<sample_type> &x, std::vector<doubl
     data.close();
     data.open(path);
 
+    //int nCol = 22;
+
+
+    int lineNumber = 0;
     while (std::getline(data, line)) {
         int columnNumber = 0;
         std::stringstream lineStream(line);
@@ -62,13 +66,14 @@ void RegressionModel::readDataSet(std::vector<sample_type> &x, std::vector<doubl
         bool first = false;
         sample_type features;
         features.set_size(nCol);
-        while (std::getline(lineStream, cell, ',')) {
+        while (std::getline(lineStream, cell, ';')) {
             if(first){
                 features(columnNumber++) = val;
             }
             first = true;
             val = std::stod(cell);
         }
+        lineNumber++;
         y.push_back(val);
         x.push_back(features);
     }
