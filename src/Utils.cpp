@@ -10,6 +10,7 @@
 #include "branch_unrealisticTrained.h"
 #include "dialog_loadModel.h"
 #include "dialog_trainmodel.h"
+#include "EventhdlrUpdateFeatures.h"
 
 using namespace scip;
 
@@ -30,6 +31,8 @@ SCIP_Retcode Utils::create_scip_instance(SCIP** scipp, bool addBranchScheme) {
 
     Branch_unrealisticTrained *objbranchruleTrained = new Branch_unrealisticTrained(scip);
     SCIP_CALL(SCIPincludeObjBranchrule(scip, objbranchruleTrained, TRUE));
+
+    SCIP_CALL(SCIPincludeObjEventhdlr(scip, new EventhdlrUpdateFeatures(scip), TRUE) );
 
     SCIP_CALL(SCIPincludeObjDialog(scip, new DialogGenerateDataset(scip), TRUE));
     SCIP_CALL(SCIPincludeObjDialog(scip, new DialogLoadModel(scip), TRUE));

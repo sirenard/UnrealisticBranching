@@ -5,13 +5,19 @@
 #include <scip/scip.h>
 #include <iostream>
 #include "FeaturesCalculator.h"
+#include "EventhdlrUpdateFeatures.h"
 
 #define FOR_BRANCH_DIRS(X) for(SCIP_BRANCHDIR dir:{SCIP_BRANCHDIR_DOWNWARDS, SCIP_BRANCHDIR_UPWARDS}){X}
 
 FeaturesCalculator::FeaturesCalculator(SCIP *scip, int signB, int signC, int signA) :
         nvars(SCIPgetNVars(scip)),
         nbrchs(0){
-    SCIP_Var **vars = SCIPgetVars(scip);
+
+    EventhdlrUpdateFeatures* eventHdlr = dynamic_cast<EventhdlrUpdateFeatures *>(SCIPgetObjEventhdlr(scip,
+                                                                                                     SCIPfindEventhdlr(
+                                                                                                             scip,
+                                                                                                              EVENT_HDLR_UPDATE_FEATURES_NAME)));
+    eventHdlr->setFeatureCalculator(this);
 }
 
 
@@ -175,6 +181,7 @@ double *FeaturesCalculator::getTreeFeatures(SCIP *scip, int nlpcands) {
 }
 
 void FeaturesCalculator::updateBranching(SCIP *scip) {
+    std::cout << "Inform" << std::endl;
     double lb = SCIPgetLocalLowerbound(scip);
     int depth = SCIPgetDepth(scip)+1;
     nbrchs++;

@@ -89,5 +89,5 @@ void DatasetWriter::setFeaturesCalculator(FeaturesCalculator *featuresCalculator
 }
 
 void DatasetWriter::informBranching(SCIP *scip) {
-    featuresCalculator->updateBranching(scip);
+    //featuresCalculator->updateBranching(scip);
 }

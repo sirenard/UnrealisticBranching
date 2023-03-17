@@ -37,7 +37,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealisticTrained::scip_execlp) {
     // get branching candidates
     SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, nullptr, &lpcandsfrac, nullptr, &nlpcands, nullptr) );
 
-    featuresCalculator->updateBranching(scip);
+    //featuresCalculator->updateBranching(scip);
 
     // estimate a score for each variable
 
