@@ -87,7 +87,7 @@ SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth,
                                   const char *filename, BranchingItem *branchingHistory, int branchingHistorySize) {
     SCIP *scip_copy=nullptr;
 
-    Utils::create_scip_instance(&scip_copy, true);
+    Utils::create_scip_instance(&scip_copy);
 
     Branch_unrealistic *objbranchrule = (Branch_unrealistic*)SCIPfindObjBranchrule(scip_copy, "unrealistic");
     assert(objbranchrule);

@@ -87,7 +87,3 @@ DatasetWriter::writeLine(SCIP_VAR *var, double score, SCIP *scip, int ubScore, i
 void DatasetWriter::setFeaturesCalculator(FeaturesCalculator *featuresCalculator) {
     DatasetWriter::featuresCalculator = featuresCalculator;
 }
-
-void DatasetWriter::informBranching(SCIP *scip) {
-    //featuresCalculator->updateBranching(scip);
-}

@@ -178,7 +178,6 @@ double *FeaturesCalculator::getTreeFeatures(SCIP *scip, int nlpcands) {
 }
 
 void FeaturesCalculator::updateBranching(SCIP *scip) {
-    std::cout << "Inform" << std::endl;
     double lb = SCIPgetLocalLowerbound(scip);
     int depth = SCIPgetDepth(scip)+1;
     nbrchs++;

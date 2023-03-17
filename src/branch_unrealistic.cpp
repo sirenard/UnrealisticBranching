@@ -63,45 +63,38 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
 
     for (int i = 0; i < nlpcands; ++i)lpcandsfrac[i] = SCIPvarGetLPSol(lpcands[i]);
 
-    bool exploration = false;
-    if(dataWriter != nullptr && depth == 0){
-        exploration = (double) rand() / double(RAND_MAX) < epsilon;
-    }
     int bestcand;
     int *varScores = nullptr; // store every variable's realNnodes
 
 
-    if (dataWriter != nullptr && depth == 0)varScores = new int[nlpcands];
-    dataWriter->informBranching(scip);
+    if (dataWriter != nullptr && depth == 0){
+        varScores = new int[nlpcands];
+    }
     Worker *worker = Worker::getInstance();
     worker->computeScores(scip, lpcands, nlpcands, bestcands, bestScore, depth + 1, maxdepth, leafTimeLimit,dataWriter != nullptr && depth == 0, varScores);
-    if(!exploration) {
-        bestcand = bestcands[rand() % bestcands.size()];
-    } else{
-        double pscostBestScore = -1;
-        for(int i=0; i<nlpcands; i++){
-            SCIP_Var* var = lpcands[i];
-            double score = SCIPgetVarPseudocostScore(scip, var, SCIPvarGetLPSol(var));
-            if(score>pscostBestScore || pscostBestScore==-1){
-                bestcand = i;
-                pscostBestScore = score;
-            }
+    bestcand = bestcands[rand() % bestcands.size()];
+
+
+
+
+
+    // If generating dataset AND with a prob epsilon, exploration by using another scheme
+    if(dataWriter != nullptr && depth == 0 && (double) rand() / double(RAND_MAX) < epsilon){
+        *result = SCIP_DIDNOTRUN;
+        std::cout << "EXPLORE" << std::endl;
+    } else { //otherwise, we branch on the best candidate found
+        SCIP_CALL(SCIPbranchVar(scip, lpcands[bestcand], NULL, NULL, NULL));
+        *result = SCIP_BRANCHED;
+
+        if (!depth) {
+            SCIPdebugMsg(scip, ("Var to branch: " + std::to_string(bestcand + 1) + "; " +
+                                std::string(SCIPvarGetName(lpcands[bestcand])) + "; Score: " +
+                                std::to_string(bestScore) + "\n").c_str());
         }
     }
 
 
-    if (!depth) {
-        SCIPdebugMsg(scip, ("Var to branch: " + std::to_string(bestcand + 1) + "; " +
-                            std::string(SCIPvarGetName(lpcands[bestcand])) + "; Score: " +
-                            std::to_string(bestScore) + "\n").c_str());
-    }
-
-    SCIP_Node* children[2];
-    SCIP_CALL(SCIPbranchVar(scip, lpcands[bestcand], &children[0], NULL, &children[1]));
-    *result = SCIP_BRANCHED;
-
-
-    if(dataWriter && depth==0 && !exploration) {
+    if(dataWriter && depth==0) {
         // the score must be: how many nodes needed from the current node. Thus remove from each score the current
         // number of nodes
         for (int i = 0; i < nlpcands; ++i) {
