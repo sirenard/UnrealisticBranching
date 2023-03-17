@@ -8,10 +8,12 @@
 #define EVENT_HDLR_UPDATE_FEATURES_NAME "hdlr_updatefeatures"
 #include "objscip/objscip.h"
 #include "FeaturesCalculator.h"
+#include "BranchingHistory.h"
 
 
 class EventhdlrUpdateFeatures: public scip::ObjEventhdlr {
     FeaturesCalculator* featureCalculator;
+    BranchingHistory* history;
     public:
     /** default constructor */
     EventhdlrUpdateFeatures(
@@ -28,6 +30,8 @@ class EventhdlrUpdateFeatures: public scip::ObjEventhdlr {
     virtual SCIP_DECL_EVENTEXEC(scip_exec);
 
     void setFeatureCalculator(FeaturesCalculator *featureCalculator);
+
+    void setHistory(BranchingHistory *history);
 
 };
 

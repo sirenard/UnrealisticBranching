@@ -6,10 +6,8 @@
 #include "../branch_unrealistic.h"
 #include "../Utils.h"
 #include <iostream>
-#include <scip/scipdefplugins.h>
 #include <algorithm>
 #include <scip/cons.h>
-#include <filesystem> //C++ 17
 #include "Worker.h"
 
 Worker* Worker::instance = nullptr;
@@ -72,25 +70,21 @@ SCIP *Worker::retrieveNode() {
 
     int historySize;
     MPI_Recv(&historySize, 1, MPI_INT, directorRank, NODE_INFO_FLAG, MPI_COMM_WORLD, &status);
-    int* history = new int[historySize];
-    double* historyValues = new double[historySize];
-    MPI_Recv(history, historySize, MPI_INT, directorRank, NODE_INFO_FLAG, MPI_COMM_WORLD, &status);
-    MPI_Recv(historyValues, historySize, MPI_DOUBLE, directorRank, NODE_INFO_FLAG, MPI_COMM_WORLD, &status);
+    BranchingItem* history = new BranchingItem[historySize];
+    MPI_Recv(history, historySize* sizeof(BranchingItem), MPI_BYTE, directorRank, NODE_INFO_FLAG, MPI_COMM_WORLD, &status);
 
 
     SCIP* res = createScipInstance(leafTimeLimit, depth, maxdepth, nodeLimit,
-                                   branchingMaxDepth, filename, history, historyValues, historySize);
+                                   branchingMaxDepth, filename, history, historySize);
 
     delete[] filename;
-    delete[] historyValues;
     delete[] history;
 
     return res;
 }
 
 SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth, int nodeLimit, int branchingMaxDepth,
-                                  const char *filename, int *branchingHistory, double *branchingHistoryValues,
-                                  int branchingHistorySize) {
+                                  const char *filename, BranchingItem *branchingHistory, int branchingHistorySize) {
     SCIP *scip_copy=nullptr;
 
     Utils::create_scip_instance(&scip_copy, true);
@@ -99,7 +93,9 @@ SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth,
     assert(objbranchrule);
     objbranchrule->setDepth(depth);
     objbranchrule->setLeafTimeLimit(leafTimeLimit);
-    objbranchrule->fillBranchHistory(branchingHistory, branchingHistoryValues, branchingHistorySize);
+
+    BranchingHistory* history = new BranchingHistory(branchingHistory, branchingHistorySize);
+    objbranchrule->setBranchingHistory(history);
     SCIPsetLongintParam(scip_copy, "limits/nodes", nodeLimit);
     SCIPsetRealParam(scip_copy, "branching/unrealistic/leaftimelimit", leafTimeLimit);
     SCIPsetIntParam(scip_copy, "branching/unrealistic/recursiondepth", maxdepth);
@@ -266,30 +262,24 @@ SCIP * Worker::sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, int va
     }
 
     Branch_unrealistic *objbranchrule = (Branch_unrealistic*)SCIPfindObjBranchrule(scip, "unrealistic");
-    std::vector<int>* history = objbranchrule->getHistory();
-    std::vector<double>* historyValues = objbranchrule->getBranchingHistoryValues();
+    std::vector<BranchingItem>* history = objbranchrule->getHistory();
 
     int historySize = history->size() + 1;
-    int* historyPtr = new int[historySize];
-    double* historyValuesPtr = new double[historySize];
-    memcpy(historyPtr, history->data(), sizeof(int)*(historySize-1));
-    memcpy(historyValuesPtr, historyValues->data(), sizeof(double)*(historySize-1));
-    historyPtr[historySize-1] = varProbIndex;
-    historyValuesPtr[historySize-1] = varValue;
+    BranchingItem* historyPtr = new BranchingItem[historySize];
+    memcpy(historyPtr, history->data(), sizeof(BranchingItem)*(historySize-1));
+    historyPtr[historySize-1] = {varProbIndex, varValue};
 
     if(workerId != rank) {
         MPI_Send(&historySize, 1, MPI_INT, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
-        MPI_Send(historyPtr, historySize, MPI_INT, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
-        MPI_Send(historyValuesPtr, historySize, MPI_DOUBLE, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
+        MPI_Send(historyPtr, historySize*sizeof(BranchingItem), MPI_BYTE, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
     }
 
     SCIP* res = nullptr;
     if(workerId == rank){
         res = createScipInstance(leafTimeLimit, depth, maxdepth, nodeLimit,
-                                 branchingMaxDepth, filename.c_str(), historyPtr, historyValuesPtr, historySize);
+                                 branchingMaxDepth, filename.c_str(), historyPtr, historySize);
     }
 
-    delete[] historyValuesPtr;
     delete[] historyPtr;
     return res;
 }

@@ -16,7 +16,8 @@
 #define 	BRANCHRULE_MAXBOUNDDIST   1.0
 
 Branch_unrealistic::Branch_unrealistic(SCIP *scip, int maxdepth, double leafTimeLimit) : ObjBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
-                                                                                            BRANCHRULE_MAXBOUNDDIST), depth(0), maxdepth(maxdepth), leafTimeLimit(leafTimeLimit), branchingHistory(new std::vector<int>), branchingHistoryValues(new std::vector<double>), branching_count(-1){}
+                                                                                            BRANCHRULE_MAXBOUNDDIST), depth(0), maxdepth(maxdepth), leafTimeLimit(leafTimeLimit), branchingHistory(
+        nullptr), branching_count(-1){}
 
 
 SCIP_RETCODE Branch_unrealistic::branchCopycat(SCIP *scip, SCIP_RESULT *result) {
@@ -24,13 +25,13 @@ SCIP_RETCODE Branch_unrealistic::branchCopycat(SCIP *scip, SCIP_RESULT *result) 
     SCIP_Var** vars = SCIPgetVars(scip);
     int n = SCIPgetNVars(scip);
     for(int i=0;i<n;++i){
-        if(SCIPvarGetProbindex(vars[i]) == branchingHistory->at(branching_count)){
+        if(SCIPvarGetProbindex(vars[i]) == branchingHistory->at(branching_count).varIndex){
             varbranch = vars[i];
             break;
         }
     }
 
-    double value = branchingHistoryValues->at(branching_count);
+    double value = branchingHistory->at(branching_count).varValue;
 
     if(branching_count == branchingHistory->size()-1){
         branching_count = -1;
@@ -95,8 +96,6 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
                             std::to_string(bestScore) + "\n").c_str());
     }
 
-    branchingHistory->push_back(SCIPvarGetProbindex(lpcands[bestcand]));
-    branchingHistoryValues->push_back(lpcandsfrac[bestcand]);
     SCIP_Node* children[2];
     SCIP_CALL(SCIPbranchVar(scip, lpcands[bestcand], &children[0], NULL, &children[1]));
     *result = SCIP_BRANCHED;
@@ -154,28 +153,16 @@ void Branch_unrealistic::setDepth(int depth) {
 
 Branch_unrealistic::~Branch_unrealistic() {
     delete branchingHistory;
-    delete branchingHistoryValues;
-}
-
-void Branch_unrealistic::fillBranchHistory(int *history, double *values, int size) {
-    branching_count = 0;
-    for(int i=0; i<size; ++i){
-        branchingHistory->push_back(history[i]);
-        branchingHistoryValues->push_back(values[i]);
-    }
 }
 
 void Branch_unrealistic::setLeafTimeLimit(double leafTimeLimit) {
     Branch_unrealistic::leafTimeLimit = leafTimeLimit;
 }
 
-std::vector<int> *Branch_unrealistic::getHistory() {
+BranchingHistory * Branch_unrealistic::getHistory() {
     return branchingHistory;
 }
 
-std::vector<double> *Branch_unrealistic::getBranchingHistoryValues() const {
-    return branchingHistoryValues;
-}
 
 char *Branch_unrealistic::getScoreMethodPtr() {
     return &scoreMethod;
@@ -187,4 +174,14 @@ double *Branch_unrealistic::getAlphaPtr() {
 
 double *Branch_unrealistic::getEpsPtr() {
     return &epsilon;
+}
+
+void Branch_unrealistic::setBranchingHistory(BranchingHistory *branchingHistory) {
+    branching_count = 0;
+    if(Branch_unrealistic::branchingHistory)delete Branch_unrealistic::branchingHistory;
+    Branch_unrealistic::branchingHistory = branchingHistory;
+}
+
+void Branch_unrealistic::disableCopyCatBranching() {
+    branching_count = -1;
 }

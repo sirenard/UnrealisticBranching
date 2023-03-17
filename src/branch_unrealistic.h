@@ -14,6 +14,7 @@
 
 #include "objscip/objscip.h"
 #include "DatasetWriter.h"
+#include "BranchingHistory.h"
 
 class Branch_unrealistic: public scip::ObjBranchrule {
 private:
@@ -22,8 +23,7 @@ private:
     int maxdepth;
     double leafTimeLimit;
 
-    std::vector<int>* branchingHistory;
-    std::vector<double>* branchingHistoryValues;
+    BranchingHistory* branchingHistory;
     int branching_count;
 
     char scoreMethod='c';
@@ -59,17 +59,17 @@ public:
 
     double * getEpsPtr();
 
-    void fillBranchHistory(int *history, double *values, int size);
-
     void setLeafTimeLimit(double leafTimeLimit);
 
     void setDepth(int depth);
 
     ~Branch_unrealistic() override;
 
-    std::vector<int> *getHistory();
+    BranchingHistory * getHistory();
 
-    std::vector<double> *getBranchingHistoryValues() const;
+    void setBranchingHistory(BranchingHistory *branchingHistory);
+
+    void disableCopyCatBranching();
 };
 
 

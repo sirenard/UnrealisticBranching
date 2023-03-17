@@ -18,6 +18,8 @@
 #include <mpi.h>
 #include <scip/scip.h>
 
+#include "../BranchingHistory.h"
+
 class Worker {
     static Worker* instance;
 
@@ -80,8 +82,7 @@ public:
 
     SCIP *
     createScipInstance(double leafTimeLimit, int depth, int maxdepth, int nodeLimit, int branchingMaxDepth,
-                       const char *filename, int *branchingHistory, double *branchingHistoryValues,
-                       int branchingHistorySize);
+                       const char *filename, BranchingItem *branchingHistory, int branchingHistorySize);
 
     int getScore(SCIP *scip);
 

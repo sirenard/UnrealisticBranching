@@ -6,6 +6,7 @@
 #include "DatasetWriter.h"
 #include "branch_unrealistic.h"
 #include "Utils.h"
+#include "EventhdlrUpdateFeatures.h"
 
 #define TEST_END_DIALOG(ptr) if(ptr[0]=='\0'){*nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);return SCIP_OKAY;}
 
@@ -71,11 +72,21 @@ SCIP_DECL_DIALOGEXEC(DialogGenerateDataset::scip_exec){
     );
 
     DatasetWriter writer("node.csv", outputfilename);
+    EventhdlrUpdateFeatures* eventHdlr = dynamic_cast<EventhdlrUpdateFeatures *>(SCIPfindObjEventhdlr(scip, EVENT_HDLR_UPDATE_FEATURES_NAME));
     FeaturesCalculator featuresCalculator(scip, signB, signC, signA);
     writer.setFeaturesCalculator(&featuresCalculator);
 
     Branch_unrealistic::setDataWriter(&writer);
-    //Utils::configure_scip_instance(scipmain, true);
+
+    BranchingHistory* history = new BranchingHistory();
+    Branch_unrealistic *objbranchrule = (Branch_unrealistic*)SCIPfindObjBranchrule(scip, "unrealistic");
+    eventHdlr->setHistory(history);
+
+    objbranchrule->setBranchingHistory(history);
+    objbranchrule->disableCopyCatBranching();
+
+
+
 
     SCIP_CALL( SCIPsolve(scip) );
 

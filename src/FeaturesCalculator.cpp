@@ -13,10 +13,7 @@ FeaturesCalculator::FeaturesCalculator(SCIP *scip, int signB, int signC, int sig
         nvars(SCIPgetNVars(scip)),
         nbrchs(0){
 
-    EventhdlrUpdateFeatures* eventHdlr = dynamic_cast<EventhdlrUpdateFeatures *>(SCIPgetObjEventhdlr(scip,
-                                                                                                     SCIPfindEventhdlr(
-                                                                                                             scip,
-                                                                                                              EVENT_HDLR_UPDATE_FEATURES_NAME)));
+    EventhdlrUpdateFeatures* eventHdlr = dynamic_cast<EventhdlrUpdateFeatures *>(SCIPfindObjEventhdlr(scip, EVENT_HDLR_UPDATE_FEATURES_NAME));
     eventHdlr->setFeatureCalculator(this);
 }
 
