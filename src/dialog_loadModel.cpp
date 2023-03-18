@@ -6,6 +6,7 @@
 #include "FeaturesCalculator.h"
 #include "RegressionModel.h"
 #include "branch_unrealisticTrained.h"
+#include "EventhdlrUpdateFeatures.h"
 
 #define DIALOG_NAME "loadmodel"
 #define DIALOG_DESC "Load a regression model that the unrealistic trained branching will use"
@@ -64,6 +65,9 @@ SCIP_DECL_DIALOGEXEC(DialogLoadModel::scip_exec) {
 
     Branch_unrealisticTrained::setFeaturesCalculator(featuresCalculator);
     Branch_unrealisticTrained::setModel(model);
+
+    EventhdlrUpdateFeatures* eventHdlr = dynamic_cast<EventhdlrUpdateFeatures *>(SCIPfindObjEventhdlr(scip, EVENT_HDLR_UPDATE_FEATURES_NAME));
+    eventHdlr->setFeatureCalculator(featuresCalculator);
 
     *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
     return SCIP_OKAY;

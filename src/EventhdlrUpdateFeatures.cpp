@@ -21,7 +21,7 @@ SCIP_DECL_EVENTINITSOL(EventhdlrUpdateFeatures::scip_initsol){
 
 SCIP_DECL_EVENTEXEC(EventhdlrUpdateFeatures::scip_exec){
     if(featureCalculator){
-        if(SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEBRANCHED) {
+        if(SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEBRANCHED && history) {
             int nchildren = SCIPgetNChildren(scip);
             assert(nchildren == 2);
             SCIP_NODE **children;
