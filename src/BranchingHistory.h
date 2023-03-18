@@ -16,7 +16,7 @@ struct BranchingItem{
 class BranchingHistory: public std::vector<BranchingItem>{
 public:
     explicit BranchingHistory();
-    BranchingHistory(BranchingItem* items, int size);
+    void fill(BranchingItem* items, int size);
     void addElement(SCIP_VAR* var);
 };
 

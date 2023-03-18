@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <scip/cons.h>
 #include "Worker.h"
+#include "../EventhdlrUpdateFeatures.h"
 
 Worker* Worker::instance = nullptr;
 Worker::Worker(unsigned int rank):
@@ -94,8 +95,9 @@ SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth,
     objbranchrule->setDepth(depth);
     objbranchrule->setLeafTimeLimit(leafTimeLimit);
 
-    BranchingHistory* history = new BranchingHistory(branchingHistory, branchingHistorySize);
-    objbranchrule->setBranchingHistory(history);
+    BranchingHistory* history = objbranchrule->getHistory();
+    history->fill(branchingHistory, branchingHistorySize);
+
     SCIPsetLongintParam(scip_copy, "limits/nodes", nodeLimit);
     SCIPsetRealParam(scip_copy, "branching/unrealistic/leaftimelimit", leafTimeLimit);
     SCIPsetIntParam(scip_copy, "branching/unrealistic/recursiondepth", maxdepth);

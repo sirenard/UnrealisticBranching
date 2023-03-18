@@ -72,18 +72,13 @@ SCIP_DECL_DIALOGEXEC(DialogGenerateDataset::scip_exec){
     );
 
     DatasetWriter writer("node.csv", outputfilename);
-    EventhdlrUpdateFeatures* eventHdlr = dynamic_cast<EventhdlrUpdateFeatures *>(SCIPfindObjEventhdlr(scip, EVENT_HDLR_UPDATE_FEATURES_NAME));
     FeaturesCalculator featuresCalculator(scip, signB, signC, signA);
     writer.setFeaturesCalculator(&featuresCalculator);
 
     Branch_unrealistic::setDataWriter(&writer);
 
-    BranchingHistory* history = new BranchingHistory();
     Branch_unrealistic *objbranchrule = (Branch_unrealistic*)SCIPfindObjBranchrule(scip, "unrealistic");
-    eventHdlr->setHistory(history);
-
-    objbranchrule->setBranchingHistory(history);
-    objbranchrule->disableCopyCatBranching();
+    objbranchrule->disableCopyCatBranching(scip);
 
 
 

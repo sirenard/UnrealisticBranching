@@ -8,6 +8,7 @@
 #include "branch_unrealistic.h"
 #include "Utils.h"
 #include "mpi/Worker.h"
+#include "EventhdlrUpdateFeatures.h"
 
 #define 	BRANCHRULE_NAME   "unrealistic"
 #define 	BRANCHRULE_DESC   "unrealistic branching"
@@ -16,8 +17,7 @@
 #define 	BRANCHRULE_MAXBOUNDDIST   1.0
 
 Branch_unrealistic::Branch_unrealistic(SCIP *scip, int maxdepth, double leafTimeLimit) : ObjBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
-                                                                                            BRANCHRULE_MAXBOUNDDIST), depth(0), maxdepth(maxdepth), leafTimeLimit(leafTimeLimit), branchingHistory(
-        nullptr), branching_count(-1){}
+                                                                                            BRANCHRULE_MAXBOUNDDIST), depth(0), maxdepth(maxdepth), leafTimeLimit(leafTimeLimit), branchingHistory(new BranchingHistory()), branching_count(0), mustTurnOffCopyCat(false){}
 
 
 SCIP_RETCODE Branch_unrealistic::branchCopycat(SCIP *scip, SCIP_RESULT *result) {
@@ -31,14 +31,20 @@ SCIP_RETCODE Branch_unrealistic::branchCopycat(SCIP *scip, SCIP_RESULT *result) 
         }
     }
 
+    assert(varbranch != nullptr);
+
     double value = branchingHistory->at(branching_count).varValue;
 
     if(branching_count == branchingHistory->size()-1){
-        branching_count = -1;
+        disableCopyCatBranching(scip);
 
         if(depth==maxdepth){
             SCIPsetIntParam(scip, "branching/unrealistic/priority", 0);
             SCIPsetRealParam(scip, "limits/time", leafTimeLimit);
+
+            // disable history recording
+            EventhdlrUpdateFeatures* eventHdlr = dynamic_cast<EventhdlrUpdateFeatures *>(SCIPfindObjEventhdlr(scip, EVENT_HDLR_UPDATE_FEATURES_NAME));
+            eventHdlr->setHistory(nullptr);
         }
     } else{
         branching_count++;
@@ -109,6 +115,14 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
 }
 
 SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
+    if(mustTurnOffCopyCat){
+        // before disabling the copyCatBranching, the history doesn't need to be recorder
+        EventhdlrUpdateFeatures* eventHdlr = dynamic_cast<EventhdlrUpdateFeatures *>(SCIPfindObjEventhdlr(scip, EVENT_HDLR_UPDATE_FEATURES_NAME));
+        eventHdlr->setHistory(branchingHistory);
+
+        mustTurnOffCopyCat = false;
+    }
+
     // an instruction already exists for the first branching (given by the parent)
     if(branching_count >= 0){
         return branchCopycat(scip, result);
@@ -137,6 +151,14 @@ SCIP_DECL_BRANCHEXIT(Branch_unrealistic::scip_exit){
     if(worker->isMaster() && depth==0){
         worker->broadcastEnd();
     }
+    branchingHistory->clear();
+    return SCIP_OKAY;
+}
+
+SCIP_DECL_BRANCHINIT(Branch_unrealistic::scip_init){
+    if(depth==0){
+        disableCopyCatBranching(scip);
+    }
     return SCIP_OKAY;
 }
 
@@ -145,7 +167,7 @@ void Branch_unrealistic::setDepth(int depth) {
 }
 
 Branch_unrealistic::~Branch_unrealistic() {
-    delete branchingHistory;
+    if(branchingHistory)delete branchingHistory;
 }
 
 void Branch_unrealistic::setLeafTimeLimit(double leafTimeLimit) {
@@ -175,6 +197,7 @@ void Branch_unrealistic::setBranchingHistory(BranchingHistory *branchingHistory)
     Branch_unrealistic::branchingHistory = branchingHistory;
 }
 
-void Branch_unrealistic::disableCopyCatBranching() {
+void Branch_unrealistic::disableCopyCatBranching(SCIP *scip) {
     branching_count = -1;
+    mustTurnOffCopyCat = true;
 }

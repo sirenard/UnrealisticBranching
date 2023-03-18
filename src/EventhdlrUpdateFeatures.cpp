@@ -20,32 +20,31 @@ SCIP_DECL_EVENTINITSOL(EventhdlrUpdateFeatures::scip_initsol){
 
 
 SCIP_DECL_EVENTEXEC(EventhdlrUpdateFeatures::scip_exec){
-    if(featureCalculator){
-        if(SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEBRANCHED && history) {
-            int nchildren = SCIPgetNChildren(scip);
-            assert(nchildren == 2);
-            SCIP_NODE **children;
-            SCIPgetChildren(scip, &children, NULL);
 
-            int depth = 1;
+    if(SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEBRANCHED && history) {
+        int nchildren = SCIPgetNChildren(scip);
+        assert(nchildren == 2);
+        SCIP_NODE **children;
+        SCIPgetChildren(scip, &children, NULL);
 
-            SCIP_Var **vars = new SCIP_Var *[depth];
-            SCIP_Real *branchbounds = new SCIP_Real[depth];
-            SCIP_BOUNDTYPE *boundtypes = new SCIP_BOUNDTYPE[depth];
-            int n;
+        int depth = 1;
 
-            SCIPnodeGetAncestorBranchings(children[0], vars, branchbounds, boundtypes, &n, depth);
+        SCIP_Var **vars = new SCIP_Var *[depth];
+        SCIP_Real *branchbounds = new SCIP_Real[depth];
+        SCIP_BOUNDTYPE *boundtypes = new SCIP_BOUNDTYPE[depth];
+        int n;
 
-            history->addElement(vars[0]);
+        SCIPnodeGetAncestorBranchings(children[0], vars, branchbounds, boundtypes, &n, depth);
 
-            delete[] vars;
-            delete[] branchbounds;
-            delete[] boundtypes;
-        }
+        history->addElement(vars[0]);
 
-        if(SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEFOCUSED) {
-            featureCalculator->updateBranching(scip);
-        }
+        delete[] vars;
+        delete[] branchbounds;
+        delete[] boundtypes;
+    }
+
+    if(featureCalculator && SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEFOCUSED) {
+        featureCalculator->updateBranching(scip);
     }
     return SCIP_OKAY;
 }
