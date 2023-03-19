@@ -118,8 +118,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealistic::scip_execlp){
 
         EventhdlrUpdateFeatures* eventHdlr = dynamic_cast<EventhdlrUpdateFeatures *>(SCIPfindObjEventhdlr(scip, EVENT_HDLR_UPDATE_FEATURES_NAME));
         if(depth==maxdepth){
-            SCIPsetIntParam(scip, "branching/unrealistic/priority", 0);
-            SCIPsetRealParam(scip, "limits/time", leafTimeLimit);
+            Utils::congigure_scip_end_recursion(scip, leafTimeLimit);
 
             // disable history recording
             eventHdlr->setHistory(nullptr);

@@ -133,3 +133,37 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip) {
 
     return SCIP_OKAY;
 }
+
+SCIP_Retcode Utils::congigure_scip_end_recursion(SCIP *scip, double leafTimeLimit) {
+    // set all branch rules
+    int nBranchingRules = SCIPgetNBranchrules(scip);
+    SCIP_Branchrule** branchrules = SCIPgetBranchrules(scip);
+
+    for(int i=0; i<nBranchingRules; ++i){
+        int priority = SCIPbranchruleGetPriority(branchrules[i]);
+        if(priority>50000) {
+            const char *name = SCIPbranchruleGetName(branchrules[i]);
+            std::string param = "branching/" + std::string(name) + "/priority";
+            SCIPsetIntParam(scip, param.c_str(), 0);
+        }
+    }
+
+    SCIPsetRealParam(scip, "limits/time", leafTimeLimit);
+
+    return SCIP_OKAY;
+}
+
+SCIP_Branchrule ** Utils::get_branching_rules(SCIP *scip) {
+    SCIP_Branchrule** branchrules = SCIPgetBranchrules(scip);
+    int nBranchingRule = SCIPgetNBranchrules(scip);
+    SCIP_Branchrule** res = new SCIP_Branchrule*[nBranchingRule];
+    memcpy(res, branchrules, nBranchingRule* sizeof(SCIP_Branchrule*));
+
+    std::sort(res, res+nBranchingRule,
+         [](SCIP_Branchrule* & a, SCIP_Branchrule* & b) -> bool
+         {
+             return SCIPbranchruleCompName(a, b)>0;
+         });
+
+    return res;
+}

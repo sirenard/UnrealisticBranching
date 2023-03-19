@@ -110,7 +110,8 @@ SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth,
 
     SCIPsetIntParam(scip_copy, "display/verblevel", 0);
 
-    SCIP_Branchrule** branchrules = SCIPgetBranchrules(scip_copy);
+    SCIP_Branchrule** branchrules = Utils::get_branching_rules(scip_copy);
+    SCIPbranchruleCompName(branchrules[0], branchrules[0]);
 
     for(int i=0; i<nBranchingRules; ++i){
         const char* name = SCIPbranchruleGetName(branchrules[i]);
@@ -119,6 +120,7 @@ SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth,
     }
 
     SCIPreadProb(scip_copy, filename, "lp");
+    delete[] branchrules;
     return scip_copy;
 }
 
@@ -291,7 +293,8 @@ SCIP * Worker::sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, int va
     }
 
     int nBranchingRules = SCIPgetNBranchrules(scip);
-    SCIP_Branchrule** branchrules = SCIPgetBranchrules(scip);
+    SCIP_Branchrule** branchrules = Utils::get_branching_rules(scip);
+
     int* priorities = new int[nBranchingRules];
 
     for(int i=0; i<nBranchingRules; ++i){
@@ -311,6 +314,7 @@ SCIP * Worker::sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, int va
 
     delete[] historyPtr;
     delete[] priorities;
+    delete[] branchrules;
     return res;
 }
 
