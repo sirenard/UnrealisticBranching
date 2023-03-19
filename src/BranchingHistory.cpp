@@ -10,10 +10,13 @@
 BranchingHistory::BranchingHistory() : std::vector<BranchingItem>() {}
 
 void BranchingHistory::addElement(SCIP_VAR *var) {
-    std::cout << "Get new var " << SCIPvarGetName(var) << std::endl;
-    int index = SCIPvarGetProbindex(var);
-    double value = SCIPvarGetLPSol(var);
-    push_back({index, value});
+    if(var) {
+        int index = SCIPvarGetProbindex(var);
+        double value = SCIPvarGetLPSol(var);
+        push_back({index, value});
+    } else{
+        push_back({-1,-1});
+    }
 }
 
 void BranchingHistory::fill(BranchingItem *items, int size) {

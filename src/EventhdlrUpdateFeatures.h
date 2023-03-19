@@ -14,6 +14,7 @@
 class EventhdlrUpdateFeatures: public scip::ObjEventhdlr {
     FeaturesCalculator* featureCalculator;
     BranchingHistory* history;
+    bool nextOneIsExploration;
     public:
     /** default constructor */
     EventhdlrUpdateFeatures(
@@ -33,6 +34,7 @@ class EventhdlrUpdateFeatures: public scip::ObjEventhdlr {
 
     void setHistory(BranchingHistory *history);
 
+    void informNextOneIsExploration();
 };
 
 

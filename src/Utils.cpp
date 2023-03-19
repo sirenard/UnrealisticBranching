@@ -125,5 +125,11 @@ SCIP_Retcode Utils::configure_scip_instance(SCIP *scip) {
     SCIP_CALL(SCIPsetIntParam(scip, "lp/threads", 1));
     SCIP_CALL(SCIPsetCharParam(scip, "estimation/restarts/restartpolicy", 'n'));
 
+    SCIP_CALL(SCIPsetIntParam(scip, "randomization/lpseed", 12));
+    SCIP_CALL(SCIPsetIntParam(scip, "randomization/permutationseed", 12));
+    SCIP_CALL(SCIPsetIntParam(scip, "randomization/randomseedshift", 12));
+    SCIP_CALL(SCIPsetIntParam(scip, "randomization/randomseedshift", 12));
+    SCIPinitializeRandomSeed(scip, 12);
+
     return SCIP_OKAY;
 }

@@ -78,7 +78,6 @@ SCIP_DECL_DIALOGEXEC(DialogGenerateDataset::scip_exec){
     Branch_unrealistic::setDataWriter(&writer);
 
     Branch_unrealistic *objbranchrule = (Branch_unrealistic*)SCIPfindObjBranchrule(scip, "unrealistic");
-    objbranchrule->disableCopyCatBranching(scip);
 
 
 
