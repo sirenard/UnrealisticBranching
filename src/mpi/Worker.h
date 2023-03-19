@@ -81,8 +81,9 @@ public:
     void getWorkersRange(int flag=WORKER_RANGE_FLAG);
 
     SCIP *
-    createScipInstance(double leafTimeLimit, int depth, int maxdepth, int nodeLimit, int branchingMaxDepth,
-                       const char *filename, BranchingItem *branchingHistory, int branchingHistorySize);
+    createScipInstance(double leafTimeLimit, int depth, int maxdepth, int nodeLimit, const char *filename,
+                       BranchingItem *branchingHistory, int branchingHistorySize, int *branchingPriorities,
+                       int nBranchingRules);
 
     int getScore(SCIP *scip);
 

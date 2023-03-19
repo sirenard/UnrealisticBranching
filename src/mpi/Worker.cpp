@@ -74,18 +74,24 @@ SCIP *Worker::retrieveNode() {
     BranchingItem* history = new BranchingItem[historySize];
     MPI_Recv(history, historySize* sizeof(BranchingItem), MPI_BYTE, directorRank, NODE_INFO_FLAG, MPI_COMM_WORLD, &status);
 
+    int nBranchingRules;
+    MPI_Recv(&nBranchingRules, 1, MPI_INT, directorRank, NODE_INFO_FLAG, MPI_COMM_WORLD, &status);
+    int* priorities = new int[nBranchingRules];
+    MPI_Recv(priorities, nBranchingRules, MPI_INT, directorRank, NODE_INFO_FLAG, MPI_COMM_WORLD, &status);
 
-    SCIP* res = createScipInstance(leafTimeLimit, depth, maxdepth, nodeLimit,
-                                   branchingMaxDepth, filename, history, historySize);
+    SCIP* res = createScipInstance(leafTimeLimit, depth, maxdepth, nodeLimit, filename, history, historySize, priorities,
+                                   nBranchingRules);
 
     delete[] filename;
     delete[] history;
+    delete[] priorities;
 
     return res;
 }
 
-SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth, int nodeLimit, int branchingMaxDepth,
-                                  const char *filename, BranchingItem *branchingHistory, int branchingHistorySize) {
+SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth, int nodeLimit, const char *filename,
+                                  BranchingItem *branchingHistory, int branchingHistorySize, int *branchingPriorities,
+                                  int nBranchingRules) {
     SCIP *scip_copy=nullptr;
 
     Utils::create_scip_instance(&scip_copy);
@@ -103,6 +109,14 @@ SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth,
     SCIPsetIntParam(scip_copy, "branching/unrealistic/recursiondepth", maxdepth);
 
     SCIPsetIntParam(scip_copy, "display/verblevel", 0);
+
+    SCIP_Branchrule** branchrules = SCIPgetBranchrules(scip_copy);
+
+    for(int i=0; i<nBranchingRules; ++i){
+        const char* name = SCIPbranchruleGetName(branchrules[i]);
+        std::string param = "branching/" + std::string(name) + "/priority";
+        SCIPsetIntParam(scip_copy, param.c_str(), branchingPriorities[i]);
+    }
 
     SCIPreadProb(scip_copy, filename, "lp");
     return scip_copy;
@@ -276,13 +290,27 @@ SCIP * Worker::sendNode(SCIP *scip, unsigned int workerId, int nodeLimit, int va
         MPI_Send(historyPtr, historySize*sizeof(BranchingItem), MPI_BYTE, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
     }
 
+    int nBranchingRules = SCIPgetNBranchrules(scip);
+    SCIP_Branchrule** branchrules = SCIPgetBranchrules(scip);
+    int* priorities = new int[nBranchingRules];
+
+    for(int i=0; i<nBranchingRules; ++i){
+        priorities[i] = SCIPbranchruleGetPriority(branchrules[i]);
+    }
+
+    if(workerId != rank) {
+        MPI_Send(&nBranchingRules, 1, MPI_INT, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
+        MPI_Send(priorities, nBranchingRules, MPI_INT, workerId, NODE_INFO_FLAG, MPI_COMM_WORLD);
+    }
+
     SCIP* res = nullptr;
     if(workerId == rank){
-        res = createScipInstance(leafTimeLimit, depth, maxdepth, nodeLimit,
-                                 branchingMaxDepth, filename.c_str(), historyPtr, historySize);
+        res = createScipInstance(leafTimeLimit, depth, maxdepth, nodeLimit, filename.c_str(), historyPtr, historySize,
+                                 priorities, nBranchingRules);
     }
 
     delete[] historyPtr;
+    delete[] priorities;
     return res;
 }
 
