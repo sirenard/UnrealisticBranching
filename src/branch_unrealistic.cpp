@@ -59,6 +59,10 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
     std::vector<int> bestcands;
     int bestScore = -1;
 
+    // true if current process is generating a dataset
+    // false if UB is simply used
+    bool generatingData =  dataWriter != nullptr && depth == 0;
+
     // get branching candidates
     SCIP_CALL(SCIPgetLPBranchCands(scip, &lpcands, nullptr, &lpcandsfrac, nullptr, &nlpcands, nullptr));
     assert(nlpcands > 0);
@@ -69,13 +73,12 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
     int *varScores = nullptr; // store every variable's realNnodes
 
 
-    if (dataWriter != nullptr && depth == 0){
-        varScores = new int[nlpcands];
-    }
-
-    bool exploration = dataWriter != nullptr && depth == 0 && (double) rand() / double(RAND_MAX) < epsilon;
+    bool exploration = generatingData && (double) rand() / double(RAND_MAX) < epsilon;
 
     if(!exploration) {
+        if (generatingData){ // need to allocate memory to remember the scores when generating a dataset
+            varScores = new int[nlpcands];
+        }
         Worker *worker = Worker::getInstance();
         worker->computeScores(scip, lpcands, nlpcands, bestcands, bestScore, depth + 1, maxdepth, leafTimeLimit,
                               dataWriter != nullptr && depth == 0, varScores);
@@ -104,7 +107,7 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
     }
 
 
-    if(!exploration) {
+    if(!exploration && generatingData) {
         // the score must be: how many nodes needed from the current node. Thus remove from each score the current
         // number of nodes
         for (int i = 0; i < nlpcands; ++i) {
