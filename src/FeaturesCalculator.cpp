@@ -204,10 +204,10 @@ void FeaturesCalculator::updateBranching(SCIP *scip) {
         open_lbs_std = std::sqrt((nbrchs * open_lbs_squared_sum - open_lbs_sum*open_lbs_sum)/(nbrchs * (nbrchs+1)));
 
 
-        if(lb > open_ds_max)open_ds_max = depth;
-        if(lb < open_ds_min)open_ds_min = depth;
+        if(depth > open_ds_max)open_ds_max = depth;
+        if(depth < open_ds_min)open_ds_min = depth;
         double open_ds_sum = open_ds_mean*(nbrchs-1);
-        open_ds_mean = (open_ds_sum + lb)/nbrchs ;
+        open_ds_mean = (open_ds_sum + depth)/nbrchs ;
         open_ds_std = std::sqrt((nbrchs * open_ds_squared_sum - open_ds_sum*open_ds_sum)/(nbrchs * (nbrchs+1)));
     }
 }
