@@ -72,16 +72,22 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
     if (dataWriter != nullptr && depth == 0){
         varScores = new int[nlpcands];
     }
-    Worker *worker = Worker::getInstance();
-    worker->computeScores(scip, lpcands, nlpcands, bestcands, bestScore, depth + 1, maxdepth, leafTimeLimit,dataWriter != nullptr && depth == 0, varScores);
-    bestcand = bestcands[rand() % bestcands.size()];
+
+    bool exploration = dataWriter != nullptr && depth == 0 && (double) rand() / double(RAND_MAX) < epsilon;
+
+    if(!exploration) {
+        Worker *worker = Worker::getInstance();
+        worker->computeScores(scip, lpcands, nlpcands, bestcands, bestScore, depth + 1, maxdepth, leafTimeLimit,
+                              dataWriter != nullptr && depth == 0, varScores);
+        bestcand = bestcands[rand() % bestcands.size()];
+    }
 
 
 
 
 
     // If generating dataset AND with a prob epsilon, exploration by using another scheme
-    if(dataWriter != nullptr && depth == 0 && (double) rand() / double(RAND_MAX) < epsilon){
+    if(exploration){
         *result = SCIP_DIDNOTRUN;
         EventhdlrUpdateFeatures* eventHdlr = dynamic_cast<EventhdlrUpdateFeatures *>(SCIPfindObjEventhdlr(scip, EVENT_HDLR_UPDATE_FEATURES_NAME));
         eventHdlr->informNextOneIsExploration();
@@ -98,7 +104,7 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
     }
 
 
-    if(dataWriter && depth==0) {
+    if(exploration) {
         // the score must be: how many nodes needed from the current node. Thus remove from each score the current
         // number of nodes
         for (int i = 0; i < nlpcands; ++i) {
