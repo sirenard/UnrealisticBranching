@@ -15,7 +15,7 @@
 
 class FeaturesCalculator {
     const int nNotreeFeatures = 25;
-    const int nTreeFeatures = 58;
+    const int nTreeFeatures = 61;
 
     double open_lbs_min, open_lbs_max, open_lbs_mean, open_lbs_std, open_lbs_squared_sum;
     double open_ds_min, open_ds_max, open_ds_mean, open_ds_std, open_ds_squared_sum;
