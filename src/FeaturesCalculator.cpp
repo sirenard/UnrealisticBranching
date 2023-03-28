@@ -9,69 +9,25 @@
 
 #include "blockmemshell/memory.h"
 #include "scip/branch.h"
-#include "scip/clock.h"
-#include "scip/concsolver.h"
 #include "scip/concurrent.h"
-#include "scip/conflict.h"
-#include "scip/conflictstore.h"
 #include "scip/debug.h"
-#include "scip/disp.h"
-#include "scip/history.h"
-#include "scip/implics.h"
 #include "scip/pricestore.h"
-#include "scip/primal.h"
-#include "scip/prob.h"
-#include "scip/pub_benderscut.h"
-#include "scip/pub_benders.h"
-#include "scip/pub_branch.h"
-#include "scip/pub_compr.h"
-#include "scip/pub_cons.h"
-#include "scip/pub_cutpool.h"
-#include "scip/pub_cutsel.h"
-#include "scip/pub_expr.h"
-#include "scip/pub_heur.h"
 #include "scip/pub_history.h"
 #include "scip/pub_message.h"
-#include "scip/pub_misc.h"
-#include "scip/pub_misc_sort.h"
-#include "scip/pub_nlpi.h"
-#include "scip/pub_presol.h"
-#include "scip/pub_pricer.h"
-#include "scip/pub_prop.h"
-#include "scip/pub_reader.h"
-#include "scip/pub_relax.h"
-#include "scip/pub_reopt.h"
-#include "scip/pub_sepa.h"
-#include "scip/pub_sol.h"
-#include "scip/pub_table.h"
 #include "scip/pub_var.h"
-#include "scip/reader.h"
 #include "scip/reopt.h"
-#include "scip/scip_benders.h"
-#include "scip/scip_general.h"
-#include "scip/scip_mem.h"
-#include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
-#include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
-#include "scip/scip_table.h"
-#include "scip/scip_timing.h"
 #include "scip/scip_var.h"
 #include "scip/sepastore.h"
-#include "scip/set.h"
-#include "scip/sol.h"
-#include "scip/stat.h"
 #include "scip/struct_mem.h"
 #include "scip/struct_primal.h"
 #include "scip/struct_prob.h"
 #include "scip/struct_scip.h"
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
-#include "scip/syncstore.h"
-#include "scip/table.h"
 #include "scip/tree.h"
 #include "scip/var.h"
-#include <string.h>
 
 #define FOR_BRANCH_DIRS(X) for(SCIP_BRANCHDIR dir:{SCIP_BRANCHDIR_DOWNWARDS, SCIP_BRANCHDIR_UPWARDS}){X}
 
@@ -249,7 +205,7 @@ double *FeaturesCalculator::getTreeFeatures(SCIP *scip, int nlpcands) {
 
 void FeaturesCalculator::updateBranching(SCIP *scip) {
     double lb = SCIPgetLocalLowerbound(scip);
-    if(lb == 10^20){
+    if(lb == -std::pow(10,20)){
         lb = 0;
     }
     int depth = SCIPgetDepth(scip)+1;
