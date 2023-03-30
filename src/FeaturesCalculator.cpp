@@ -190,7 +190,8 @@ double *FeaturesCalculator::getTreeFeatures(SCIP *scip, int nlpcands) {
     features[idx++] = relPos(open_lbs_min, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip));
     features[idx++] = relPos(open_lbs_max, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip));
     features[idx++] = 0; // TODO
-    features[idx++] = open_lbs_std / open_lbs_mean;
+    if(open_lbs_mean)features[idx++] = open_lbs_std / open_lbs_mean;
+    else features[idx++] = 0;
     features[idx++] = 0; // TODO
 
     features[idx++] = (double)open_ds_mean/ (1.0+SCIPgetMaxDepth(scip));
