@@ -69,7 +69,7 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
 
     bool exploration = generatingData && (double) rand() / double(RAND_MAX) < epsilon;
 
-    if(!exploration) {
+    //if(!exploration) {
         if (generatingData){ // need to allocate memory to remember the scores when generating a dataset
             varScores = new int[nlpcands];
         }
@@ -77,7 +77,7 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
         worker->computeScores(scip, lpcands, nlpcands, bestcands, bestScore, depth + 1, maxdepth, leafTimeLimit,
                               dataWriter != nullptr && depth == 0, varScores);
         bestcand = bestcands[rand() % bestcands.size()];
-    }
+    //}
 
     // If generating dataset AND with a prob epsilon, exploration by using another scheme
     if(exploration){
@@ -97,7 +97,7 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
     }
 
 
-    if(!exploration && generatingData) {
+    if(generatingData) {
         // the score must be: how many nodes needed from the current node. Thus remove from each score the current
         // number of nodes
         for (int i = 0; i < nlpcands; ++i) {
