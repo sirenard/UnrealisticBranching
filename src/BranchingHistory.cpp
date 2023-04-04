@@ -4,19 +4,14 @@
 
 #include "BranchingHistory.h"
 #include <scip/scip.h>
-#include <iostream>
 
 
 BranchingHistory::BranchingHistory() : std::vector<BranchingItem>() {}
 
 void BranchingHistory::addElement(SCIP_VAR *var) {
-    if(var) {
-        int index = SCIPvarGetProbindex(var);
-        double value = SCIPvarGetLPSol(var);
-        push_back({index, value});
-    } else{
-        push_back({-1,-1});
-    }
+    int index = SCIPvarGetProbindex(var);
+    double value = SCIPvarGetLPSol(var);
+    push_back({index, value});
 }
 
 void BranchingHistory::fill(BranchingItem *items, int size) {
