@@ -21,7 +21,7 @@ SCIP_DECL_EVENTINITSOL(EventhdlrUpdateFeatures::scip_initsol){
 
 
 SCIP_DECL_EVENTEXEC(EventhdlrUpdateFeatures::scip_exec){
-    if(SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEBRANCHED && history) {
+    if(SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEBRANCHED && (history || featureCalculator)) {
         int nchildren = SCIPgetNChildren(scip);
         assert(nchildren == 2);
         SCIP_NODE **children;
@@ -36,7 +36,11 @@ SCIP_DECL_EVENTEXEC(EventhdlrUpdateFeatures::scip_exec){
 
         SCIPnodeGetAncestorBranchings(children[0], vars, branchbounds, boundtypes, &n, depth);
 
-        history->addElement(vars[0]);
+        if(featureCalculator)
+            featureCalculator->updateBranchCounter(children, vars[0]);
+
+        if(history)
+            history->addElement(vars[0]);
 
         delete[] vars;
         delete[] branchbounds;
@@ -44,7 +48,7 @@ SCIP_DECL_EVENTEXEC(EventhdlrUpdateFeatures::scip_exec){
     }
 
     if(featureCalculator && SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEFOCUSED) {
-        featureCalculator->updateBranching(scip);
+        // ?
     }
     return SCIP_OKAY;
 }

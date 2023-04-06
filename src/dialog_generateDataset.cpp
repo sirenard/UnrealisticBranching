@@ -75,6 +75,9 @@ SCIP_DECL_DIALOGEXEC(DialogGenerateDataset::scip_exec){
     FeaturesCalculator featuresCalculator(scip, signB, signC, signA);
     writer.setFeaturesCalculator(&featuresCalculator);
 
+    EventhdlrUpdateFeatures* eventHdlr = dynamic_cast<EventhdlrUpdateFeatures *>(SCIPfindObjEventhdlr(scip, EVENT_HDLR_UPDATE_FEATURES_NAME));
+    eventHdlr->setFeatureCalculator(&featuresCalculator);
+
     Branch_unrealistic::setDataWriter(&writer);
 
     Branch_unrealistic *objbranchrule = (Branch_unrealistic*)SCIPfindObjBranchrule(scip, "unrealistic");

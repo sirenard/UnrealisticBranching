@@ -24,8 +24,7 @@ public:
 
     void informBranching(SCIP *scip);
 
-    void writeLine(SCIP_VAR *var, double score, SCIP *scip, int ubScore, int smallestUbScore, int biggestUbScore,
-                   double *nodeFeatures, int nodeFeaturesSize);
+    void writeLine(SCIP_VAR *var, double score, SCIP *scip, int ubScore, int smallestUbScore, int biggestUbScore);
 
     void setFeaturesCalculator(FeaturesCalculator *featuresCalculator);
 };
