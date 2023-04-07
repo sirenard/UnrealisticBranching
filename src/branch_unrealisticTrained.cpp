@@ -54,10 +54,13 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealisticTrained::scip_execlp) {
         }
     }
 
-
-    SCIP_Node* children[2];
-    SCIP_CALL( SCIPbranchVar(scip, lpcands[bestcand], &children[0], NULL, &children[1]) );
-    *result = SCIP_BRANCHED;
+    //if(bestScore > 0.5) {
+        SCIP_Node *children[2];
+        SCIP_CALL(SCIPbranchVar(scip, lpcands[bestcand], &children[0], NULL, &children[1]));
+        *result = SCIP_BRANCHED;
+    //} else{
+    //    *result = SCIP_DIDNOTRUN;
+    //}
 
     return SCIP_OKAY;
 }

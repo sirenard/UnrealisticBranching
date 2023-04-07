@@ -25,13 +25,17 @@ SCIP_RETCODE Branch_unrealistic::branchCopycat(SCIP *scip, SCIP_RESULT *result) 
     SCIP_Var** vars = SCIPgetVars(scip);
     int n = SCIPgetNVars(scip);
 
-    for (int i = 0; i < n; ++i) { // search for the good variable
-        if (SCIPvarGetProbindex(vars[i]) == branchingHistory->at(branching_count).varIndex) {
-            varbranch = vars[i];
-            break;
+    if(branchingHistory->at(branching_count).varIndex == -1){ // exploration must be repeated
+        *result = SCIP_DIDNOTRUN;
+    } else {
+        for (int i = 0; i < n; ++i) { // search for the good variable
+            if (SCIPvarGetProbindex(vars[i]) == branchingHistory->at(branching_count).varIndex) {
+                varbranch = vars[i];
+                break;
+            }
+            assert(varbranch != nullptr);
         }
     }
-    assert(varbranch != nullptr);
 
 
     double value = branchingHistory->at(branching_count).varValue;
