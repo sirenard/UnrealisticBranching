@@ -22,41 +22,37 @@ SCIP_DECL_EVENTINITSOL(EventhdlrUpdateFeatures::scip_initsol){
 
 SCIP_DECL_EVENTEXEC(EventhdlrUpdateFeatures::scip_exec){
     if(SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEBRANCHED && (history || featureCalculator)) {
-        if (nextOneIsExploration) {
-            history->addElement(nullptr);
-            nextOneIsExploration = false;
-        } else {
-            int nchildren = SCIPgetNChildren(scip);
-            assert(nchildren == 2);
-            SCIP_NODE **children;
-            SCIPgetChildren(scip, &children, NULL);
+        int nchildren = SCIPgetNChildren(scip);
+        assert(nchildren == 2);
+        SCIP_NODE **children;
+        SCIPgetChildren(scip, &children, NULL);
 
-            int depth = 1;
+        int depth = 1;
 
-            SCIP_Var **vars = new SCIP_Var *[depth];
-            SCIP_Real *branchbounds = new SCIP_Real[depth];
-            SCIP_BOUNDTYPE *boundtypes = new SCIP_BOUNDTYPE[depth];
-            int n;
+        SCIP_Var **vars = new SCIP_Var *[depth];
+        SCIP_Real *branchbounds = new SCIP_Real[depth];
+        SCIP_BOUNDTYPE *boundtypes = new SCIP_BOUNDTYPE[depth];
+        int n;
 
-            SCIPnodeGetAncestorBranchings(children[0], vars, branchbounds, boundtypes, &n, depth);
+        SCIPnodeGetAncestorBranchings(children[0], vars, branchbounds, boundtypes, &n, depth);
 
-            if(featureCalculator)
-                featureCalculator->updateBranchCounter(children, vars[0]);
+        if(featureCalculator)
+            featureCalculator->updateBranchCounter(children, vars[0]);
 
-            if(history)
+        if(history){
+            if (nextOneIsExploration) {
+                history->addElement(nullptr);
+                nextOneIsExploration = false;
+            } else{
                 history->addElement(vars[0]);
-
-            delete[] vars;
-            delete[] branchbounds;
-            delete[] boundtypes;
+            }
         }
+
+        delete[] vars;
+        delete[] branchbounds;
+        delete[] boundtypes;
     }
 
-
-
-    if(featureCalculator && SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEFOCUSED) {
-        // ?
-    }
     return SCIP_OKAY;
 }
 
