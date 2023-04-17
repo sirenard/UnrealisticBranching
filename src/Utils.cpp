@@ -104,6 +104,20 @@ SCIP_Retcode Utils::create_scip_instance(SCIP **scipp) {
             NULL,
             NULL
     ));
+
+    SCIP_CALL(SCIPaddRealParam(
+            scip,
+            "branching/unrealisticTrained/threshold",
+            "Above which tthreshold does the predicted score is relevant",
+            objbranchruleTrained->getAlphaPtr(),
+            FALSE,
+            0,
+            0,
+            1,
+            NULL,
+            NULL
+    ));
+
     configure_scip_instance(scip);
 
     return SCIP_OKAY;

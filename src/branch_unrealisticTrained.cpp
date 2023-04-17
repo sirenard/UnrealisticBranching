@@ -54,13 +54,13 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealisticTrained::scip_execlp) {
         }
     }
 
-    //if(bestScore > 0.5) {
+    if(bestScore >= alpha || alpha==0) {
         SCIP_Node *children[2];
         SCIP_CALL(SCIPbranchVar(scip, lpcands[bestcand], &children[0], NULL, &children[1]));
         *result = SCIP_BRANCHED;
-    //} else{
-    //    *result = SCIP_DIDNOTRUN;
-    //}
+    } else{
+        *result = SCIP_DIDNOTRUN;
+    }
 
     return SCIP_OKAY;
 }
@@ -73,4 +73,8 @@ void Branch_unrealisticTrained::setFeaturesCalculator(FeaturesCalculator *newCal
 void Branch_unrealisticTrained::setModel(RegressionModel *newModel) {
     if(model)delete model;
     model = newModel;
+}
+
+double *Branch_unrealisticTrained::getAlphaPtr() {
+    return &alpha;
 }

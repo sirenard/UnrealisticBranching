@@ -33,8 +33,8 @@ SCIP_RETCODE Branch_unrealistic::branchCopycat(SCIP *scip, SCIP_RESULT *result) 
                 varbranch = vars[i];
                 break;
             }
-            assert(varbranch != nullptr);
         }
+        assert(varbranch != nullptr);
     }
 
 

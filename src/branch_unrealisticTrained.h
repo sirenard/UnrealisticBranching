@@ -19,6 +19,7 @@ class Branch_unrealisticTrained: public scip::ObjBranchrule {
 private:
     static FeaturesCalculator *featuresCalculator;
     static RegressionModel *model;
+    double alpha=0;
 
     SCIP_DECL_BRANCHEXECLP(scip_execlp) override;
 
@@ -28,6 +29,7 @@ public:
     static void setFeaturesCalculator(FeaturesCalculator *newCalculator);
 
     static void setModel(RegressionModel *newModel);
+    double* getAlphaPtr();
 };
 
 #endif //LEARNING_BRANCH_UNREALISTICTRAINED_H
