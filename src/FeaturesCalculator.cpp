@@ -5,6 +5,7 @@
 #include <scip/scip.h>
 #include <iostream>
 #include "FeaturesCalculator.h"
+#include <scip/struct_lp.h>
 
 FeaturesCalculator::FeaturesCalculator(SCIP *scip, int signB, int signC, int signA) :
         nStaticFeatures(1 + (signC==0) + 2*(1+(signB==0)) + 2*(1+(signC==0)) + 2*(1+3*(signA==0))),
@@ -299,19 +300,23 @@ void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip, SCIP_Var **va
         features[2] = varObj - std::floor(varObj);
 
         double varObjCoef = std::abs(SCIPvarGetObj(vars[i]));
-        if(varObjCoef!=0){
+        /*std::cout << SCIPvarGetName(vars[i]) << "="<< SCIPvarGetLPSol(vars[i]) << std::endl;
+        std::cout << "LB: " << lb[i] << std::endl;
+        std::cout << "UB: " << ub[i] << std::endl;*/
+
+        //if(varObjCoef!=0){
             if(lb[i] != SCIP_REAL_MAX && lb[i] != SCIP_REAL_MIN)
-                features[3] = lb[i]/ varObjCoef;
+                features[3] = lb[i]/ SCIPnodeGetLowerbound(SCIPgetCurrentNode(scip));
             else
                 features[3] = 0;
             if(ub[i] != SCIP_REAL_MAX && ub[i] != SCIP_REAL_MIN)
-                features[3] = ub[i]/ varObjCoef;
+                features[4] = ub[i]/ SCIPnodeGetLowerbound(SCIPgetCurrentNode(scip));
             else
-                features[3] = 0;
-        } else{
+                features[4] = 0;
+        /*} else{
             features[3] = 0;
             features[4] = 0;
-        }
+        }*/
     }
 
     delete[] lb;
@@ -382,6 +387,7 @@ void FeaturesCalculator::computeSensitivity(SCIP *scip, double *lb, double *ub, 
     std::fill(ub, ub+varsSize, SCIP_REAL_MAX);
 
     double* row = new double[ncols];
+    double* col = new double[nrows];
     double* redcost = new double[ncols];
     for(int i=0; i<ncols; ++i){
         redcost[i] = SCIPgetVarRedcost(scip, allvars[i]);
@@ -390,9 +396,16 @@ void FeaturesCalculator::computeSensitivity(SCIP *scip, double *lb, double *ub, 
     int count=nrows-1;
     double eps = SCIPepsilon(scip);
     for(int i=0; i<varsSize; ++i){
-        if(redcost[i] != 0)continue;
+        double rc = SCIPgetVarRedcost(scip, vars[i]);
+        if(rc != 0)continue;
         double varobj = SCIPvarGetObj(vars[i]);
-        int k = count--;
+//        int k = count--;
+        SCIPgetLPBInvACol(scip, SCIPvarGetCol(vars[i])->index, col, NULL, NULL);
+        int k;
+        for(k=0; k<nrows; ++k){
+            if(col[k]>=1.0-eps)break;
+        }
+
         SCIPgetLPBInvARow(scip, k, NULL, row, NULL, NULL);
         for(int j=0; j<ncols; ++j){
             if(redcost[j] >= -eps && redcost[j] <= eps)continue; // equals 0
@@ -407,6 +420,7 @@ void FeaturesCalculator::computeSensitivity(SCIP *scip, double *lb, double *ub, 
 
 
     delete[] row;
+    delete[] col;
     delete[] redcost;
 }
 
