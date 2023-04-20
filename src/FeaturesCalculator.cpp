@@ -239,7 +239,11 @@ void FeaturesCalculator::updateBranchCounter(SCIP_NODE **nodes, SCIP_VAR *var) {
 
     double parentObj = SCIPnodeGetLowerbound(SCIPnodeGetParent(nodes[0]));
     for(auto i:{0,1}){
-        double tmp = SCIPnodeGetLowerbound(nodes[i]) - parentObj;
+        double lb = SCIPnodeGetLowerbound(nodes[i]);
+        if (lb==1e20){
+            lb=1;
+        }
+        double tmp = lb - parentObj;
         increase *= std::max(tmp, 10e-3);
     }
 
@@ -300,23 +304,20 @@ void FeaturesCalculator::computeDynamicProblemFeatures(SCIP *scip, SCIP_Var **va
         features[2] = varObj - std::floor(varObj);
 
         double varObjCoef = std::abs(SCIPvarGetObj(vars[i]));
+        if(varObjCoef==0)varObjCoef =1;
         /*std::cout << SCIPvarGetName(vars[i]) << "="<< SCIPvarGetLPSol(vars[i]) << std::endl;
         std::cout << "LB: " << lb[i] << std::endl;
         std::cout << "UB: " << ub[i] << std::endl;*/
 
-        //if(varObjCoef!=0){
-            if(lb[i] != SCIP_REAL_MAX && lb[i] != SCIP_REAL_MIN)
-                features[3] = lb[i]/ SCIPnodeGetLowerbound(SCIPgetCurrentNode(scip));
-            else
-                features[3] = 0;
-            if(ub[i] != SCIP_REAL_MAX && ub[i] != SCIP_REAL_MIN)
-                features[4] = ub[i]/ SCIPnodeGetLowerbound(SCIPgetCurrentNode(scip));
-            else
-                features[4] = 0;
-        /*} else{
+        if(lb[i] != SCIP_REAL_MAX && lb[i] != SCIP_REAL_MIN)
+            features[3] = lb[i]/ varObjCoef;
+        else
             features[3] = 0;
+        if(ub[i] != SCIP_REAL_MAX && ub[i] != SCIP_REAL_MIN)
+            features[4] = ub[i]/ varObjCoef;
+        else
             features[4] = 0;
-        }*/
+
     }
 
     delete[] lb;

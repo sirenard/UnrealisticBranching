@@ -31,7 +31,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealisticTrained::scip_execlp) {
     SCIP_Real* lpcandsfrac;
     int nlpcands; // number of candidates
 
-    int bestcand = -1;
+    int bestcand = 0;
     double bestScore = 1;
 
     // get branching candidates
@@ -45,22 +45,29 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealisticTrained::scip_execlp) {
 
     // estimate a score for each variable
     for (int i = 0; i < nlpcands; ++i) {
-        std::vector<double> features = featuresCalculator->getFeatures(lpcands[i], scip);
-        double score = model->predictScore(features);
+        std::vector<double> features_i = featuresCalculator->getFeatures(lpcands[i], scip);
+        int s = features_i.size();
+        for(int k=0; k<s; k++) {
+            features_i.push_back(0);
+        }
 
-        if(bestcand == -1 || score > bestScore){
-            bestScore = score;
+        std::vector<double> features_best = featuresCalculator->getFeatures(lpcands[bestcand], scip);
+        for(int k=0; k<features_best.size(); k++) {
+            features_i.at(s+k) = features_best[k];
+        }
+
+        double score = model->predictScore(features_i);
+
+        if(score > alpha){
             bestcand = i;
         }
+
+
     }
 
-    if(bestScore >= alpha || alpha==0) {
-        SCIP_Node *children[2];
-        SCIP_CALL(SCIPbranchVar(scip, lpcands[bestcand], &children[0], NULL, &children[1]));
-        *result = SCIP_BRANCHED;
-    } else{
-        *result = SCIP_DIDNOTRUN;
-    }
+    SCIP_Node *children[2];
+    SCIP_CALL(SCIPbranchVar(scip, lpcands[bestcand], &children[0], NULL, &children[1]));
+    *result = SCIP_BRANCHED;
 
     return SCIP_OKAY;
 }
