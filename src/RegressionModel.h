@@ -24,7 +24,7 @@ public:
     double train(std::string csvPath);
     void save(std::fstream &out);
     void setNTrees(int newNTrees);
-    double predictScore(const std::vector<double> &features);
+    double predictScore(double *features, int size);
 };
 
 
