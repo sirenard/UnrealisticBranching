@@ -356,37 +356,12 @@ const int FeaturesCalculator::getNObjectiveIncreaseStatics() const {
 }
 
 void FeaturesCalculator::getFeatures(SCIP_Var *var, SCIP *scip, double *features) {
-    /*std::vector<double> res;
-
-    int arraySizes[3] = {
-            getNStaticFeatures(),
-            getNDynamicFeatures(),
-            getNObjectiveIncreaseStatics()
-    };
-    const double* features[3] = {
-            getStaticFeatures(var, scip),
-            getDynamicProblemFeatures(var),
-            getDynamicOptimizationFeatures(var)
-    };*/
-
     int idx=0;
     memcpy(features, getStaticFeatures(var, scip), getNStaticFeatures()*sizeof(double));
     idx += getNStaticFeatures();
     memcpy(&features[idx], getDynamicProblemFeatures(var), getNDynamicFeatures()*sizeof(double));
     idx += getNDynamicFeatures();
     memcpy(&features[idx], getDynamicOptimizationFeatures(var), getNObjectiveIncreaseStatics()*sizeof(double));
-
-
-
-
-    /*for(int i=0; i<3; ++i){
-        //line += "start " + std::to_string(i) + ";";
-        for(int k=0; k<arraySizes[i]; ++k){
-            res.push_back(features[i][k]);
-        }
-    }*/
-
-    //return res;
 }
 
 void FeaturesCalculator::computeSensitivity(SCIP *scip, double *lb, double *ub, SCIP_Var **vars, int varsSize) {

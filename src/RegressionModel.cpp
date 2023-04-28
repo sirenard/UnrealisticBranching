@@ -83,8 +83,9 @@ RegressionModel::RegressionModel(int nTrees): nTrees(nTrees)  {
 
 }
 
-double RegressionModel::predictScore(double *features, int size) {
+double RegressionModel::predictScore(double *features) {
     sample_type x;
+    int size = getInputSize();
     x.set_size(size);
 
     for(int i=0; i<size; ++i) {
