@@ -63,7 +63,7 @@ SCIP_Retcode Utils::create_scip_instance(SCIP **scipp) {
             NULL
     ));
 
-    char possibilities[] = {'c', 'a', 'n'};
+    char possibilities[] = {'c', 'a', 'n', '1'};
     SCIP_CALL(SCIPaddCharParam(
             scip,
             "dataset/scoremethod",
@@ -161,8 +161,6 @@ SCIP_Retcode Utils::congigure_scip_end_recursion(SCIP *scip, double leafTimeLimi
             SCIPsetIntParam(scip, param.c_str(), 0);
         }
     }
-
-    SCIPsetRealParam(scip, "limits/time", leafTimeLimit);
 
     return SCIP_OKAY;
 }

@@ -106,6 +106,7 @@ SCIP * Worker::createScipInstance(double leafTimeLimit, int depth, int maxdepth,
 
     SCIPsetLongintParam(scip_copy, "limits/nodes", nodeLimit);
     SCIPsetRealParam(scip_copy, "branching/unrealistic/leaftimelimit", leafTimeLimit);
+    SCIPsetRealParam(scip_copy, "limits/time", leafTimeLimit);
     SCIPsetIntParam(scip_copy, "branching/unrealistic/recursiondepth", maxdepth);
 
     SCIPsetIntParam(scip_copy, "display/verblevel", 0);
@@ -135,6 +136,11 @@ void Worker::computeScores(SCIP *scip, SCIP_VAR **lpcands, int nlpcands, std::ve
     } else{
         minNumberWorker = std::max(MIN_NUMBER_WORKER, (int)std::ceil(double(nWorkers)/nlpcands));
     }
+
+    if(depth>1){
+        leafTimeLimit /= (double)nlpcands / ((double)nWorkers/minNumberWorker); // split the allocated time
+    }
+
     if(nWorkers) {
         int *workerMap = new int[nWorkers]; // workermap[i]=j -> The i th worker works on candidate j
         std::fill(workerMap, workerMap+nWorkers, -1);

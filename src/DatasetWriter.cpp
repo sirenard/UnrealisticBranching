@@ -22,7 +22,18 @@ DatasetWriter::addNode(SCIP *scip, int nlpcands, int *varScores, SCIP_VAR **lpca
         if(varScores[i] < minScore)minScore=varScores[i];
     }
 
-    for(int i=0; i<nlpcands; ++i){
+    if(scoreMethod == '1'){
+        for(int i=0; i<nlpcands; ++i) {
+            if (maxScore == minScore)continue;
+            for (int j = 0; j < nlpcands; ++j) {
+                if (i == j || varScores[i] == INT_MAX && varScores[j] == INT_MAX)continue;
+                double score = varScores[i] < varScores[j];
+
+                SCIP_Var* vars[] = {lpcands[i], lpcands[j]};
+                writeLine(vars, 2, score, scip, varScores[i], minScore, maxScore);
+            }
+        }
+    } else for(int i=0; i<nlpcands; ++i){
         if(varScores[i] == INT_MAX)continue;
         if(maxScore == minScore)continue;
 
@@ -40,7 +51,7 @@ DatasetWriter::addNode(SCIP *scip, int nlpcands, int *varScores, SCIP_VAR **lpca
         }
 
         SCIP_VAR* var = lpcands[i];
-        writeLine(var, score, scip, varScores[i], minScore, maxScore);
+        writeLine(&var, 1, score, scip, varScores[i], minScore, maxScore);
     }
 
     return SCIP_OKAY;
@@ -52,25 +63,30 @@ DatasetWriter::~DatasetWriter() {
 }
 
 void
-DatasetWriter::writeLine(SCIP_VAR *var, double score, SCIP *scip, int ubScore, int smallestUbScore,
+DatasetWriter::writeLine(SCIP_VAR **vars, int nVars, double score, SCIP *scip, int ubScore, int smallestUbScore,
                          int biggestUbScore) {
     // TODO: use getFeatures instead
+    std::string line;
+
     int arraySizes[3] = {
             featuresCalculator->getNStaticFeatures(),
             featuresCalculator->getNDynamicFeatures(),
             featuresCalculator->getNObjectiveIncreaseStatics()
     };
-    const double* features[3] = {
-            featuresCalculator->getStaticFeatures(var, scip),
-            featuresCalculator->getDynamicProblemFeatures(var),
-            featuresCalculator->getDynamicOptimizationFeatures(var)
-    };
 
-    std::string line;
+    for(int s=0;s<nVars;s++) {
+        SCIP_Var *var = vars[s];
+        const double *features[3] = {
+                featuresCalculator->getStaticFeatures(var, scip),
+                featuresCalculator->getDynamicProblemFeatures(var),
+                featuresCalculator->getDynamicOptimizationFeatures(var)
+        };
 
-    for(int i=0; i<3; ++i){
-        for(int k=0; k<arraySizes[i]; ++k){
-            line += std::to_string(features[i][k]) + ",";
+
+        for (int i = 0; i < 3; ++i) {
+            for (int k = 0; k < arraySizes[i]; ++k) {
+                line += std::to_string(features[i][k]) + ",";
+            }
         }
     }
 

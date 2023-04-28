@@ -68,15 +68,12 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
     for (int i = 0; i < nlpcands; ++i)lpcandsfrac[i] = SCIPvarGetLPSol(lpcands[i]);
 
     int bestcand;
-    int *varScores = nullptr; // store every variable's realNnodes
+    int *varScores =new int[nlpcands]; // store every variable's realNnodes
 
 
     bool exploration = generatingData && (double) rand() / double(RAND_MAX) < epsilon;
 
     //if(!exploration) {
-        if (generatingData){ // need to allocate memory to remember the scores when generating a dataset
-            varScores = new int[nlpcands];
-        }
         Worker *worker = Worker::getInstance();
         worker->computeScores(scip, lpcands, nlpcands, bestcands, bestScore, depth + 1, maxdepth, leafTimeLimit,
                               dataWriter != nullptr && depth == 0, varScores);
@@ -84,7 +81,7 @@ SCIP_RETCODE Branch_unrealistic::branchUnrealistic(SCIP *scip, SCIP_RESULT *resu
     //}
 
     // If generating dataset AND with a prob epsilon, exploration by using another scheme
-    if(exploration){
+    if(exploration || varScores[bestcand]==INT_MAX){
         *result = SCIP_DIDNOTRUN;
         EventhdlrUpdateFeatures* eventHdlr = dynamic_cast<EventhdlrUpdateFeatures *>(SCIPfindObjEventhdlr(scip, EVENT_HDLR_UPDATE_FEATURES_NAME));
         eventHdlr->informNextOneIsExploration();
