@@ -83,11 +83,11 @@ RegressionModel::RegressionModel(int nTrees): nTrees(nTrees)  {
 
 }
 
-double RegressionModel::predictScore(const std::vector<double> &features) {
+double RegressionModel::predictScore(double *features, int size) {
     sample_type x;
-    x.set_size(features.size());
+    x.set_size(size);
 
-    for(int i=0; i<features.size(); ++i) {
+    for(int i=0; i<size; ++i) {
         x(i) = features[i];
     }
 

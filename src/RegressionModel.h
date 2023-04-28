@@ -25,7 +25,7 @@ public:
     void save(std::fstream &out);
     void setNTrees(int newNTrees);
     int getInputSize();
-    double predictScore(const std::vector<double> &features);
+    double predictScore(double *features);
 };
 
 

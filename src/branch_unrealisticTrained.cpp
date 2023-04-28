@@ -49,37 +49,26 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealisticTrained::scip_execlp) {
 
     int modelInputSize = model->getInputSize();
     featuresCalculator->computeDynamicProblemFeatures(scip, lpcands, nlpcands);
-
-    std::vector<double> features_best = featuresCalculator->getFeatures(lpcands[0], scip);
-
+    int featuresSize = featuresCalculator->getNFeatures();
+    double *features = new double[modelInputSize];
     // estimate a score for each variable
     for (int i = 0; i < nlpcands; ++i) {
-        std::vector<double> features_i = featuresCalculator->getFeatures(lpcands[i], scip);
-        double score = 0;
-
-        if(modelInputSize == 2*features_i.size()) { // use 1v1 approach
-            if(i==0)continue;
-
-            int s = features_i.size();
-            for (int k = 0; k < s; k++) {
-                features_i.push_back(0);
+        if(modelInputSize == 2*featuresSize) { // use 1v1 approach
+            if(i==0){
+                featuresCalculator->getFeatures(lpcands[0], scip, &features[featuresSize]);
+                continue;
+            } else{
+                featuresCalculator->getFeatures(lpcands[i], scip, features);
             }
 
-            /*for (int j = 0; j < nlpcands; ++j) {
-                if (i == j)continue;
-                std::vector<double> features_best = featuresCalculator->getFeatures(lpcands[j], scip);*/
-                for (int k = 0; k < features_best.size(); k++) {
-                    features_i.at(s + k) = features_best[k];
-                }
-
-                double sc = model->predictScore(features_i);
-                if (sc > alpha) {
-                    bestcand=i;
-                }
-
-            //}
+            double score = model->predictScore(features);
+            if(score > alpha){
+                bestcand = i;
+                memcpy( &features[featuresSize], features, featuresSize*sizeof(double));
+            }
         } else{
-            score = model->predictScore(features_i);
+            featuresCalculator->getFeatures(lpcands[i], scip, features);
+            double score = model->predictScore(features);
             if(score > bestScore){
                 bestcand = i;
                 bestScore = score;
@@ -96,6 +85,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealisticTrained::scip_execlp) {
     SCIP_CALL(SCIPbranchVar(scip, lpcands[bestcand], &children[0], NULL, &children[1]));
     *result = SCIP_BRANCHED;
 
+    delete[] features;
     return SCIP_OKAY;
 }
 

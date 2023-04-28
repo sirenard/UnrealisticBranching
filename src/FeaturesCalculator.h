@@ -69,7 +69,9 @@ public:
 
     const int getNObjectiveIncreaseStatics() const;
 
-    const std::vector<double> getFeatures(SCIP_Var *var, SCIP *scip);
+    const int getNFeatures() const;
+
+    void getFeatures(SCIP_Var *var, SCIP *scip, double *features);
     virtual ~FeaturesCalculator();
 
     /**
