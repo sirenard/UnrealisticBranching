@@ -13,11 +13,7 @@ else()
 endif()
 
 
-#set(DLIB_PATH /home/simon/Téléchargements/dlib-19.24)
 find_package(dlib REQUIRED)
-#include_directories(${DLIB_PATH})
-#target_link_libraries(scip_learning ${DLIB_PATH} dlib)
-#add_subdirectory(${DLIB_PATH} dlib_build)
 
 
 include_directories(${SCIP_INCLUDE_DIRS})
@@ -30,19 +26,13 @@ target_link_libraries(scip_learning ${SCIP_LIBRARIES})
 target_link_libraries(scip_learning  dlib::dlib)
 target_link_libraries(scip_learning ${MPI_LIBRARIES})
 
-if(ZLIB)
-    find_package(ZLIB)
-    if(ZLIB_FOUND)
-        target_link_libraries(scip_learning ${ZLIB_LIBRARIES})
-    endif()
+find_package(ZLIB)
+if(ZLIB_FOUND)
+    target_link_libraries(scip_learning ${ZLIB_LIBRARIES})
 endif()
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 set(CMAKE_CPP_FLAGS "${CMAKE_CPP_FLAGS} -Wall")
-
-if( TARGET examples )
-    add_dependencies( examples scip_learning )
-endif()
-
+set(CMAKE_CXX_FLAGS_RELEASE "-O2")
