@@ -34,7 +34,7 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealisticTrained::scip_execlp) {
     int nlpcands; // number of candidates
 
     int bestcand = 0;
-    double bestScore=0;
+    double bestScore=SCIP_REAL_MIN;
 
 
     // get branching candidates
@@ -54,17 +54,21 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealisticTrained::scip_execlp) {
     // estimate a score for each variable
     for (int i = 0; i < nlpcands; ++i) {
         if(modelInputSize == 2*featuresSize) { // use 1v1 approach
-            if(i==0){
-                featuresCalculator->getFeatures(lpcands[0], scip, &features[featuresSize]);
-                continue;
-            } else{
-                featuresCalculator->getFeatures(lpcands[i], scip, features);
+            featuresCalculator->getFeatures(lpcands[i], scip, features);
+            double score=0;
+            for(int j=0; j<nlpcands; ++j) {
+                if(i==j)continue;
+                featuresCalculator->getFeatures(lpcands[j], scip, &features[featuresSize]);
+                double s=model->predictScore(features);
+                if(s>=alpha){
+                    score += s;
+                } else{
+                    score -= s;
+                }
             }
-
-            double score = model->predictScore(features);
-            if(score > alpha){
+            if(score > bestScore){
                 bestcand = i;
-                memcpy( &features[featuresSize], features, featuresSize*sizeof(double));
+                bestScore = score;
             }
         } else{
             featuresCalculator->getFeatures(lpcands[i], scip, features);
@@ -74,11 +78,6 @@ SCIP_DECL_BRANCHEXECLP(Branch_unrealisticTrained::scip_execlp) {
                 bestScore = score;
             }
         }
-
-
-
-
-
     }
 
     SCIP_Node *children[2];

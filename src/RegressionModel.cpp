@@ -25,7 +25,7 @@ double RegressionModel::train(std::string csvPath){
 
     double mse = 0;
     for(int i=0; i < loo.size(); i++) {
-        mse += std::pow(std::round(loo.at(i))-std::round(y.at(i)), 2);
+        mse += std::pow((loo.at(i))-(y.at(i)), 2);
     }
     mse /= loo.size();
 
