@@ -68,7 +68,9 @@ SCIP_Retcode Utils::create_scip_instance(SCIP **scipp) {
             scip,
             "dataset/scoremethod",
             "How the score must be computed. 'c'ontinuous mapping between 0 and 1. Or use of 'a'lpha: the score is 1 "
-            "if variable SB score is <= (1+alpha)bestUbScore. Or 'n'one: no score computed for each features vector"
+            "if variable SB score is <= (1+alpha)bestUbScore. "
+            "'1' for the 1v1 approach"
+            "Or 'n'one: no score computed for each features vector"
             "the current SB score, the minimum and maximum SB score are reported",
             objbranchrule->getScoreMethodPtr(),
             FALSE,
@@ -95,7 +97,7 @@ SCIP_Retcode Utils::create_scip_instance(SCIP **scipp) {
     SCIP_CALL(SCIPaddRealParam(
             scip,
             "dataset/epsilon",
-            "Random branching is performed with probability epsilon at each step during dataset generation",
+            "Exploration branching is performed with probability epsilon at each step during dataset generation",
             objbranchrule->getEpsPtr(),
             FALSE,
             0.3,
@@ -108,7 +110,7 @@ SCIP_Retcode Utils::create_scip_instance(SCIP **scipp) {
     SCIP_CALL(SCIPaddRealParam(
             scip,
             "branching/unrealisticTrained/threshold",
-            "Above which tthreshold does the predicted score is relevant",
+            "Above which threshold does the predicted score is relevant (for the 1v1 approach)",
             objbranchruleTrained->getAlphaPtr(),
             FALSE,
             0,
